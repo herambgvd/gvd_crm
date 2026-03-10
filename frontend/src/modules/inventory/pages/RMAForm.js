@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "../../../components";
 import { createRma, updateRma, fetchRmaRecord } from "../api";
-import { fetchProducts } from "../../products/api";
-import { fetchEntities } from "../../entities/api";
+import { fetchProducts, fetchCategoryTree, fetchProduct } from "../../products/api";
 import {
   Card,
   CardContent,
@@ -36,7 +35,8 @@ const ISSUE_CATEGORIES = [
 
 const INITIAL_FORM = {
   product_id: "",
-  entity_id: "",
+  contact_name: "",
+  contact_phone: "",
   quantity: 1,
   serial_number: "",
   issue_description: "",
@@ -54,6 +54,11 @@ const RMAForm = () => {
 
   const [formData, setFormData] = useState(INITIAL_FORM);
 
+  // Category / subcategory filter state
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("");
+  const editRestored = React.useRef(false);
+
   // Fetch existing record if editing
   const { data: existingRecord } = useQuery({
     queryKey: ["rmaDetail", id],
@@ -61,36 +66,91 @@ const RMAForm = () => {
     enabled: isEdit,
   });
 
-  // Fetch products & entities for selects
-  const { data: productsData } = useQuery({
-    queryKey: ["products", "all"],
-    queryFn: () => fetchProducts({ page_size: 1000 }),
+  // Fetch product details when editing (to restore category/subcategory)
+  const { data: existingProduct } = useQuery({
+    queryKey: ["product", existingRecord?.product_id],
+    queryFn: () => fetchProduct(existingRecord.product_id),
+    enabled: isEdit && Boolean(existingRecord?.product_id),
   });
 
-  const { data: entitiesData } = useQuery({
-    queryKey: ["entities", "all"],
-    queryFn: () => fetchEntities({ page_size: 1000 }),
+  // Fetch category tree
+  const { data: categoryTree } = useQuery({
+    queryKey: ["categoryTree"],
+    queryFn: fetchCategoryTree,
+    staleTime: 300000,
+  });
+
+  const categories = useMemo(() => {
+    if (!categoryTree) return [];
+    return categoryTree.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      subcategories: cat.subcategories || [],
+    }));
+  }, [categoryTree]);
+
+  const selectedCategoryObj = useMemo(
+    () => categories.find((c) => c.id === selectedCategory),
+    [categories, selectedCategory],
+  );
+
+  const subcategories = useMemo(
+    () => selectedCategoryObj?.subcategories || [],
+    [selectedCategoryObj],
+  );
+
+  const selectedSubcategoryObj = useMemo(
+    () => subcategories.find((s) => s.id === selectedSubcategory),
+    [subcategories, selectedSubcategory],
+  );
+
+  // Fetch products filtered by category/subcategory
+  const { data: productsData, isLoading: productsLoading } = useQuery({
+    queryKey: ["products", selectedCategoryObj?.name, selectedSubcategoryObj?.name],
+    queryFn: () =>
+      fetchProducts({
+        page: 1,
+        page_size: 100,
+        category: selectedCategoryObj?.name || undefined,
+        subcategory: selectedSubcategoryObj?.name || undefined,
+      }),
+    enabled: Boolean(selectedCategoryObj?.name),
   });
 
   const products = productsData?.items || [];
-  const entities = entitiesData?.items || [];
 
-  // Populate form when editing
+  // Restore form + category/subcategory/product when editing
+  // Wait for ALL data before setting anything so the product select can match
   useEffect(() => {
-    if (existingRecord) {
-      setFormData({
-        product_id: existingRecord.product_id || "",
-        entity_id: existingRecord.entity_id || "",
-        quantity: existingRecord.quantity || 1,
-        serial_number: existingRecord.serial_number || "",
-        issue_description: existingRecord.issue_description || "",
-        issue_category: existingRecord.issue_category || "",
-        is_warranty_claim: existingRecord.is_warranty_claim || false,
-        notes: existingRecord.notes || "",
-        assigned_to: existingRecord.assigned_to || "",
-      });
+    if (!isEdit || editRestored.current) return;
+    if (!existingRecord || !existingProduct || categories.length === 0) return;
+
+    // Populate form fields
+    setFormData({
+      product_id: existingRecord.product_id || "",
+      contact_name: existingRecord.contact_name || "",
+      contact_phone: existingRecord.contact_phone || "",
+      quantity: existingRecord.quantity || 1,
+      serial_number: existingRecord.serial_number || "",
+      issue_description: existingRecord.issue_description || "",
+      issue_category: existingRecord.issue_category || "",
+      is_warranty_claim: existingRecord.is_warranty_claim || false,
+      notes: existingRecord.notes || "",
+      assigned_to: existingRecord.assigned_to || "",
+    });
+
+    // Restore category/subcategory selectors
+    const cat = categories.find((c) => c.name === existingProduct.category);
+    if (cat) {
+      setSelectedCategory(cat.id);
+      const sub = cat.subcategories?.find(
+        (s) => s.name === existingProduct.subcategory,
+      );
+      if (sub) setSelectedSubcategory(sub.id);
     }
-  }, [existingRecord]);
+
+    editRestored.current = true;
+  }, [isEdit, existingRecord, existingProduct, categories]);
 
   const mutation = useMutation({
     mutationFn: (data) => (isEdit ? updateRma(id, data) : createRma(data)),
@@ -116,10 +176,6 @@ const RMAForm = () => {
       toast.error("Please select a product");
       return;
     }
-    if (!formData.entity_id) {
-      toast.error("Please select a customer");
-      return;
-    }
     if (!formData.issue_description.trim()) {
       toast.error("Issue description is required");
       return;
@@ -129,16 +185,22 @@ const RMAForm = () => {
       return;
     }
 
-    const payload = {
-      ...formData,
+    const basePayload = {
+      product_id: formData.product_id,
       quantity: parseInt(formData.quantity, 10),
+      category: selectedCategoryObj?.name || undefined,
+      subcategory: selectedSubcategoryObj?.name || undefined,
+      contact_name: formData.contact_name || undefined,
+      contact_phone: formData.contact_phone || undefined,
       serial_number: formData.serial_number || undefined,
+      issue_description: formData.issue_description,
       issue_category: formData.issue_category || undefined,
+      is_warranty_claim: formData.is_warranty_claim,
       notes: formData.notes || undefined,
       assigned_to: formData.assigned_to || undefined,
     };
 
-    mutation.mutate(payload);
+    mutation.mutate(basePayload);
   };
 
   return (
@@ -171,15 +233,80 @@ const RMAForm = () => {
               <CardTitle>RMA Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
+              {/* Category & Subcategory */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Category *</Label>
+                  <Select
+                    value={selectedCategory}
+                    onValueChange={(v) => {
+                      setSelectedCategory(v);
+                      setSelectedSubcategory("");
+                      handleChange("product_id", "");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Subcategory</Label>
+                  <Select
+                    value={selectedSubcategory}
+                    onValueChange={(v) => {
+                      setSelectedSubcategory(v);
+                      handleChange("product_id", "");
+                    }}
+                    disabled={!selectedCategory || subcategories.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={
+                          subcategories.length === 0
+                            ? "No subcategories"
+                            : "Select subcategory"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subcategories.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id}>
+                          {sub.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               {/* Product */}
               <div>
                 <Label htmlFor="product">Product *</Label>
                 <Select
                   value={formData.product_id}
                   onValueChange={(v) => handleChange("product_id", v)}
+                  disabled={!selectedCategory || productsLoading}
                 >
                   <SelectTrigger id="product">
-                    <SelectValue placeholder="Select a product" />
+                    <SelectValue
+                      placeholder={
+                        !selectedCategory
+                          ? "Select category first"
+                          : productsLoading
+                            ? "Loading products..."
+                            : products.length === 0
+                              ? "No products found"
+                              : "Select a product"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {products.map((p) => (
@@ -191,24 +318,26 @@ const RMAForm = () => {
                 </Select>
               </div>
 
-              {/* Customer / Entity */}
-              <div>
-                <Label htmlFor="entity">Customer *</Label>
-                <Select
-                  value={formData.entity_id}
-                  onValueChange={(v) => handleChange("entity_id", v)}
-                >
-                  <SelectTrigger id="entity">
-                    <SelectValue placeholder="Select a customer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {entities.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Customer Name & Phone */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="contact_name">Customer Name</Label>
+                  <Input
+                    id="contact_name"
+                    value={formData.contact_name}
+                    onChange={(e) => handleChange("contact_name", e.target.value)}
+                    placeholder="Customer name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="contact_phone">Customer Phone</Label>
+                  <Input
+                    id="contact_phone"
+                    value={formData.contact_phone}
+                    onChange={(e) => handleChange("contact_phone", e.target.value)}
+                    placeholder="e.g., +91 9876543210"
+                  />
+                </div>
               </div>
 
               {/* Quantity & Serial Number */}

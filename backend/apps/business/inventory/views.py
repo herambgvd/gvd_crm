@@ -526,9 +526,22 @@ async def update_rma(
     data: RMAUpdate,
     current_user: User = Depends(require_permission("inventory:update")),
 ):
+    from .service import get_product_info
     update_data = data.model_dump(exclude_unset=True)
     if update_data.get("status"):
         update_data["status"] = update_data["status"].value
+    # Re-enrich product info if product_id is being changed
+    if "product_id" in update_data:
+        product = await get_product_info(update_data["product_id"])
+        if not product:
+            raise HTTPException(status_code=400, detail="Product not found")
+        update_data["product_name"] = product["name"]
+        update_data["product_sku"] = product["sku"]
+    # Map category/subcategory to stored field names
+    if "category" in update_data:
+        update_data["product_category"] = update_data.pop("category")
+    if "subcategory" in update_data:
+        update_data["product_subcategory"] = update_data.pop("subcategory")
     doc = await rma_service.update(rma_id, update_data, user_id=current_user.id)
     if not doc:
         raise HTTPException(status_code=404, detail="RMA not found")
