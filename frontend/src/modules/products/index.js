@@ -1,0 +1,9 @@
+export { default as Products } from "./pages/Products";
+export { default as ProductForm } from "./pages/ProductForm";
+export { default as Inventory } from "./pages/Inventory";
+export { default as Categories } from "./pages/Categories";
+export { default as InventoryConfig } from "./pages/InventoryConfig";
+export { default as MovementCategories } from "./pages/MovementCategories";
+export { default as Movements } from "./pages/Movements";
+export { default as MovementForm } from "./pages/MovementForm";
+export { default as MovementDetail } from "./pages/MovementDetail";

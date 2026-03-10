@@ -1,0 +1,1 @@
+# Business app - Contains all business domain models and logic

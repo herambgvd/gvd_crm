@@ -1,0 +1,9 @@
+export { default as Users } from "./pages/Users";
+export { default as UserForm } from "./pages/UserForm";
+export { default as Roles } from "./pages/Roles";
+export { default as RoleForm } from "./pages/RoleForm";
+export { default as Teams } from "./pages/Teams";
+export { default as TeamForm } from "./pages/TeamForm";
+export { default as Templates } from "./pages/Templates";
+export { default as TemplateForm } from "./pages/TemplateForm";
+export { default as Config } from "./pages/Config";
