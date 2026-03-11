@@ -1006,11 +1006,13 @@ class RMAService(BaseCRUDService):
         
         data["product_name"] = product["name"]
         data["product_sku"] = product["sku"]
+        data["product_category"] = data.pop("category", None) or product.get("category")
+        data["product_subcategory"] = data.pop("subcategory", None)
         
-        entity = await get_entity_info(data["entity_id"])
-        if not entity:
+        entity = await get_entity_info(data["entity_id"]) if data.get("entity_id") else None
+        if data.get("entity_id") and not entity:
             raise ValueError("Entity not found")
-        data["entity_name"] = entity["name"]
+        data["entity_name"] = entity["name"] if entity else (data.get("contact_name") or "")
         
         data["status"] = RMAStatus.RECEIVED.value
         data["received_date"] = datetime.now(timezone.utc).isoformat()

@@ -284,10 +284,12 @@ class RMACreate(BaseModel):
     product_id: str
     serial_number: Optional[str] = None
     quantity: int = Field(default=1, ge=1)
-    entity_id: str
+    entity_id: Optional[str] = None
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
     issue_description: str = Field(..., min_length=1)
     issue_category: Optional[str] = None
     sales_order_id: Optional[str] = None
@@ -299,6 +301,15 @@ class RMACreate(BaseModel):
 
 
 class RMAUpdate(BaseModel):
+    product_id: Optional[str] = None
+    serial_number: Optional[str] = None
+    quantity: Optional[int] = Field(None, ge=1)
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+    contact_email: Optional[str] = None
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
+    is_warranty_claim: Optional[bool] = None
     status: Optional[RMAStatus] = None
     issue_description: Optional[str] = None
     issue_category: Optional[str] = None
@@ -329,10 +340,12 @@ class RMAResponse(BaseModel):
     product_id: str = ""
     product_name: str = ""
     product_sku: str = ""
+    product_category: Optional[str] = None
+    product_subcategory: Optional[str] = None
     serial_number: Optional[str] = None
     quantity: int = 1
-    entity_id: str = ""
-    entity_name: str = ""
+    entity_id: Optional[str] = None
+    entity_name: Optional[str] = None
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
