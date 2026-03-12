@@ -26,9 +26,11 @@ export const fetchEntities = async (params = {}) => {
   return response.data;
 };
 
-export const searchEntities = async (q, limit = 10) => {
+export const searchEntities = async (q, limit = 10, entityType = null) => {
+  const params = new URLSearchParams({ q: q || "", limit });
+  if (entityType) params.append("entity_type", entityType);
   const response = await axios.get(
-    `${API}/entities/search?q=${encodeURIComponent(q)}&limit=${limit}`,
+    `${API}/entities/search?${params.toString()}`,
     { headers: getAuthHeader() },
   );
   return response.data;
@@ -66,5 +68,40 @@ export const bulkUploadEntities = async (data) => {
   const response = await axios.post(`${API}/entities/bulk-upload`, data, {
     headers: getAuthHeader(),
   });
+  return response.data;
+};
+
+// ─── Team Members ─────────────────────────────────
+
+export const fetchTeamMembers = async (entityId) => {
+  const response = await axios.get(`${API}/entities/${entityId}/team-members`, {
+    headers: getAuthHeader(),
+  });
+  return response.data;
+};
+
+export const createTeamMember = async (entityId, data) => {
+  const response = await axios.post(
+    `${API}/entities/${entityId}/team-members`,
+    { ...data, entity_id: entityId },
+    { headers: getAuthHeader() },
+  );
+  return response.data;
+};
+
+export const updateTeamMember = async (entityId, memberId, data) => {
+  const response = await axios.put(
+    `${API}/entities/${entityId}/team-members/${memberId}`,
+    data,
+    { headers: getAuthHeader() },
+  );
+  return response.data;
+};
+
+export const deleteTeamMember = async (entityId, memberId) => {
+  const response = await axios.delete(
+    `${API}/entities/${entityId}/team-members/${memberId}`,
+    { headers: getAuthHeader() },
+  );
   return response.data;
 };

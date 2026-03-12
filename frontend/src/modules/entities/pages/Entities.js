@@ -393,7 +393,7 @@ const Entities = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleView(entity)}
+                          onClick={() => navigate(`/entities/${entity.id}`)}
                           data-testid="view-entity-btn"
                         >
                           <Eye className="h-4 w-4 text-blue-600" />

@@ -43,19 +43,19 @@ import {
 } from "../../../components/ui/alert-dialog";
 
 const STATUS_OPTIONS = [
-  { value: "new", label: "New" },
-  { value: "qualified", label: "Qualified" },
-  { value: "contacted", label: "Contacted" },
-  { value: "converted", label: "Converted" },
+  { value: "new_lead", label: "New Lead" },
+  { value: "under_review", label: "Under Review" },
+  { value: "solution_design", label: "Solution Design" },
+  { value: "proposal_submitted", label: "Proposal Submitted" },
+  { value: "under_negotiation", label: "Under Negotiation" },
+  { value: "poc_evaluation", label: "POC / Tech Eval" },
+  { value: "price_finalization", label: "Price Finalization" },
+  { value: "pi_issued", label: "PI Issued" },
+  { value: "order_won", label: "Order Won" },
+  { value: "order_processing", label: "Order Processing" },
+  { value: "project_execution", label: "Project Execution" },
+  { value: "project_completed", label: "Project Completed" },
   { value: "lost", label: "Lost" },
-];
-
-const CHANNEL_OPTIONS = [
-  { value: "consultant", label: "Consultant" },
-  { value: "project", label: "Project" },
-  { value: "oem", label: "B2B/OEM" },
-  { value: "distributor", label: "Distributor" },
-  { value: "dealer", label: "Dealer" },
 ];
 
 const PRIORITY_OPTIONS = [
@@ -66,10 +66,18 @@ const PRIORITY_OPTIONS = [
 ];
 
 const STATUS_COLORS = {
-  new: "bg-blue-50 text-blue-700 ring-blue-600/20",
-  qualified: "bg-purple-50 text-purple-700 ring-purple-600/20",
-  contacted: "bg-yellow-50 text-yellow-700 ring-yellow-600/20",
-  converted: "bg-green-50 text-green-700 ring-green-600/20",
+  new_lead: "bg-blue-50 text-blue-700 ring-blue-600/20",
+  under_review: "bg-sky-50 text-sky-700 ring-sky-600/20",
+  solution_design: "bg-violet-50 text-violet-700 ring-violet-600/20",
+  proposal_submitted: "bg-indigo-50 text-indigo-700 ring-indigo-600/20",
+  under_negotiation: "bg-amber-50 text-amber-700 ring-amber-600/20",
+  poc_evaluation: "bg-orange-50 text-orange-700 ring-orange-600/20",
+  price_finalization: "bg-yellow-50 text-yellow-700 ring-yellow-600/20",
+  pi_issued: "bg-lime-50 text-lime-700 ring-lime-600/20",
+  order_won: "bg-green-50 text-green-700 ring-green-600/20",
+  order_processing: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  project_execution: "bg-teal-50 text-teal-700 ring-teal-600/20",
+  project_completed: "bg-cyan-50 text-cyan-700 ring-cyan-600/20",
   lost: "bg-red-50 text-red-700 ring-red-600/20",
 };
 
@@ -89,7 +97,6 @@ const Leads = () => {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("all");
-  const [channelFilter, setChannelFilter] = React.useState("all");
   const [priorityFilter, setPriorityFilter] = React.useState("all");
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(20);
@@ -103,24 +110,16 @@ const Leads = () => {
   // Reset page on filter change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, statusFilter, channelFilter, priorityFilter, pageSize]);
+  }, [debouncedSearch, statusFilter, priorityFilter, pageSize]);
 
   // Build query params
   const queryParams = React.useMemo(() => {
     const params = { page: currentPage, page_size: pageSize };
     if (statusFilter !== "all") params.status = statusFilter;
-    if (channelFilter !== "all") params.channel = channelFilter;
     if (priorityFilter !== "all") params.priority = priorityFilter;
     if (debouncedSearch) params.search = debouncedSearch;
     return params;
-  }, [
-    currentPage,
-    pageSize,
-    statusFilter,
-    channelFilter,
-    priorityFilter,
-    debouncedSearch,
-  ]);
+  }, [currentPage, pageSize, statusFilter, priorityFilter, debouncedSearch]);
 
   const { data: leadsData, isLoading } = useQuery({
     queryKey: ["leads", queryParams],
@@ -175,18 +174,13 @@ const Leads = () => {
     }
   };
 
-  const getStatusBadge = (status) => (
-    <Badge
-      className={`${STATUS_COLORS[status] || STATUS_COLORS.new} ring-1 ring-inset`}
-    >
-      {status}
-    </Badge>
-  );
-
-  const getChannelBadge = (channel) => {
-    const label =
-      CHANNEL_OPTIONS.find((c) => c.value === channel)?.label || channel;
-    return <Badge variant="outline">{label}</Badge>;
+  const getStatusBadge = (status) => {
+    const label = STATUS_OPTIONS.find((s) => s.value === status)?.label || status;
+    return (
+      <Badge className={`${STATUS_COLORS[status] || STATUS_COLORS.new_lead} ring-1 ring-inset`}>
+        {label}
+      </Badge>
+    );
   };
 
   const getPriorityBadge = (priority) => (
@@ -197,22 +191,26 @@ const Leads = () => {
     </Badge>
   );
 
-  const getNextStatus = (currentStatus) => {
-    const workflow = {
-      new: "qualified",
-      qualified: "contacted",
-      contacted: "converted",
-    };
-    return workflow[currentStatus];
+  const WORKFLOW_NEXT = {
+    new_lead: "under_review",
+    under_review: "solution_design",
+    solution_design: "proposal_submitted",
+    proposal_submitted: "under_negotiation",
+    under_negotiation: "poc_evaluation",
+    poc_evaluation: "price_finalization",
+    price_finalization: "pi_issued",
+    pi_issued: "order_won",
+    order_won: "order_processing",
+    order_processing: "project_execution",
+    project_execution: "project_completed",
   };
 
+  const getNextStatus = (currentStatus) => WORKFLOW_NEXT[currentStatus];
+
   const getNextStatusLabel = (currentStatus) => {
-    const labels = {
-      new: "Mark as Qualified",
-      qualified: "Mark as Contacted",
-      contacted: "Mark as Converted",
-    };
-    return labels[currentStatus];
+    const next = WORKFLOW_NEXT[currentStatus];
+    if (!next) return null;
+    return STATUS_OPTIONS.find((s) => s.value === next)?.label || next;
   };
 
   const handleStatusChange = (leadId, currentStatus) => {
@@ -303,14 +301,14 @@ const Leads = () => {
         {/* Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="md:col-span-2">
                 <Label htmlFor="search">Search</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="search"
-                    placeholder="Search by project, contact, company, email, phone..."
+                    placeholder="Search by project, source, notes..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -328,22 +326,6 @@ const Leads = () => {
                     {STATUS_OPTIONS.map((s) => (
                       <SelectItem key={s.value} value={s.value}>
                         {s.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="channel-filter">Channel</Label>
-                <Select value={channelFilter} onValueChange={setChannelFilter}>
-                  <SelectTrigger id="channel-filter">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Channels</SelectItem>
-                    {CHANNEL_OPTIONS.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>
-                        {c.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -410,10 +392,7 @@ const Leads = () => {
             <Card className="col-span-full">
               <CardContent className="py-12 text-center">
                 <p className="text-gray-500">
-                  {debouncedSearch ||
-                  statusFilter !== "all" ||
-                  channelFilter !== "all" ||
-                  priorityFilter !== "all"
+                  {debouncedSearch || statusFilter !== "all" || priorityFilter !== "all"
                     ? "No leads match your filters."
                     : "No leads found. Create your first lead!"}
                 </p>
@@ -433,14 +412,18 @@ const Leads = () => {
                         <h3 className="font-bold text-xl font-heading text-blue-600">
                           {lead.project_name || "Untitled Project"}
                         </h3>
-                        <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
-                          <User className="h-3 w-3" />
-                          <span>{lead.contact_name}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-sm text-gray-600 mt-0.5">
-                          <Building className="h-3 w-3" />
-                          <span>{lead.company}</span>
-                        </div>
+                        {(lead.customer_name || lead.company) && (
+                          <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
+                            <Building className="h-3 w-3" />
+                            <span>{lead.customer_name || lead.company}</span>
+                          </div>
+                        )}
+                        {lead.contact_name && (
+                          <div className="flex items-center gap-1 text-sm text-gray-600 mt-0.5">
+                            <User className="h-3 w-3" />
+                            <span>{lead.contact_name}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-1">
                         <Button
@@ -480,16 +463,15 @@ const Leads = () => {
                           </span>
                         </div>
                       )}
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Phone className="h-3 w-3" />
-                        <span className="font-mono text-xs">
-                          {lead.contact_phone}
-                        </span>
-                      </div>
+                      {lead.contact_phone && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Phone className="h-3 w-3" />
+                          <span className="font-mono text-xs">{lead.contact_phone}</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap">
-                      {getChannelBadge(lead.channel)}
                       {getStatusBadge(lead.status)}
                       {lead.priority &&
                         lead.priority !== "medium" &&
@@ -513,21 +495,21 @@ const Leads = () => {
                     )}
 
                     {/* Workflow Actions */}
-                    {lead.status !== "converted" && lead.status !== "lost" && (
+                    {lead.status !== "project_completed" && lead.status !== "lost" && (
                       <div className="pt-3 border-t flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() =>
-                            handleStatusChange(lead.id, lead.status)
-                          }
-                          disabled={updateStatusMutation.isPending}
-                          data-testid="status-change-btn"
-                        >
-                          <ArrowRight className="h-3 w-3 mr-2" />
-                          {getNextStatusLabel(lead.status)}
-                        </Button>
+                        {getNextStatus(lead.status) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => handleStatusChange(lead.id, lead.status)}
+                            disabled={updateStatusMutation.isPending}
+                            data-testid="status-change-btn"
+                          >
+                            <ArrowRight className="h-3 w-3 mr-2" />
+                            {getNextStatusLabel(lead.status)}
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -600,7 +582,7 @@ const Leads = () => {
                 This action cannot be undone. This will permanently delete the
                 lead
                 <strong className="block mt-2 text-foreground">
-                  {leadToDelete?.contact_name} ({leadToDelete?.company})
+                  {leadToDelete?.project_name || leadToDelete?.customer_name || leadToDelete?.company || "this lead"}
                 </strong>
               </AlertDialogDescription>
             </AlertDialogHeader>

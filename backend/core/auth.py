@@ -226,20 +226,13 @@ async def get_current_superuser(
     return current_user
 
 def require_permission(permission: str):
-    """Decorator for requiring specific permission"""
-    async def permission_checker(
-        current_user: User = Depends(get_current_user)
-    ) -> User:
-        # TODO: Implement proper permission checking with roles
-        # For now, just check if user is active
-        if not current_user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not enough permissions"
-            )
-        return current_user
-    
-    return permission_checker
+    """
+    Proxy to core.permissions.require_permission.
+    Import here to avoid circular deps — views that import from core.auth
+    still get the real RBAC check.
+    """
+    from core.permissions import require_permission as _real_require_permission
+    return _real_require_permission(permission)
 
 # Optional authentication dependency
 async def get_current_user_optional(

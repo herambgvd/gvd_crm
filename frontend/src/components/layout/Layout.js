@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -25,8 +25,15 @@ import {
   FileText,
   BarChart3,
   GitBranch,
+  Bell,
 } from "lucide-react";
 import { Button } from "../ui/button";
+import {
+  fetchNotifications,
+  fetchUnreadCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "../../lib/notificationsApi";
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -40,6 +47,55 @@ const Layout = ({ children }) => {
   const [inventoryMenuOpen, setInventoryMenuOpen] = useState(false);
   const [inventoryConfigMenuOpen, setInventoryConfigMenuOpen] = useState(false);
   const [materialFlowMenuOpen, setMaterialFlowMenuOpen] = useState(false);
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const notifRef = useRef(null);
+
+  const loadNotifications = async () => {
+    try {
+      const [notifs, count] = await Promise.all([
+        fetchNotifications(),
+        fetchUnreadCount(),
+      ]);
+      setNotifications(notifs);
+      setUnreadCount(count);
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 30000); // poll every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleNotifClick = async (notif) => {
+    if (!notif.is_read) {
+      await markNotificationRead(notif.id);
+      await loadNotifications();
+    }
+    if (notif.link) navigate(notif.link);
+    setNotifOpen(false);
+  };
+
+  const handleMarkAllRead = async () => {
+    await markAllNotificationsRead();
+    await loadNotifications();
+  };
+  // ───────────────────────────────────────────────────────────────────────────
 
   const handleLogout = () => {
     logout();
@@ -67,8 +123,8 @@ const Layout = ({ children }) => {
 
   // Sales Department Menu Items
   const salesMenuItems = [
-    { name: "Enquiries", href: "/enquiries", icon: ClipboardList },
     { name: "Leads", href: "/leads", icon: Users },
+    { name: "Customers", href: "/customers", icon: Building2 },
     { name: "Entities", href: "/entities", icon: Building2 },
   ];
 
@@ -1130,16 +1186,76 @@ const Layout = ({ children }) => {
 
       {/* Main content */}
       <div className={sidebarCollapsed ? "md:pl-16" : "md:pl-64"}>
-        {/* Top bar */}
-        <div className="sticky top-0 z-10 md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-[#FAFAFA]">
+        {/* Top bar — hamburger (mobile) + notification bell (all) */}
+        <div className="sticky top-0 z-20 flex items-center justify-between md:justify-end pl-1 pt-1 pr-4 sm:pl-3 sm:pt-3 pb-1 bg-[#FAFAFA] border-b border-gray-100">
           <button
             type="button"
-            className="-ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+            className="md:hidden -ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none"
             onClick={() => setSidebarOpen(true)}
           >
             <span className="sr-only">Open sidebar</span>
             <Menu className="h-6 w-6" aria-hidden="true" />
           </button>
+
+          {/* Notification Bell */}
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => setNotifOpen((o) => !o)}
+              className="relative p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-900 focus:outline-none"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {notifOpen && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                  <span className="font-semibold text-sm text-gray-900">Notifications</span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                  {notifications.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-6">No notifications</p>
+                  ) : (
+                    notifications.map((n) => (
+                      <button
+                        key={n.id}
+                        onClick={() => handleNotifClick(n)}
+                        className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
+                          !n.is_read ? "bg-blue-50/60" : ""
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          {!n.is_read && (
+                            <span className="mt-1.5 h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
+                          )}
+                          <div className={!n.is_read ? "" : "ml-4"}>
+                            <p className="text-sm font-medium text-gray-900 leading-snug">
+                              {n.title}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                              {n.message}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Page content */}

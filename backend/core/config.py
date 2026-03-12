@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import List, Optional
 from pathlib import Path
 from dotenv import load_dotenv
@@ -8,35 +9,50 @@ import secrets
 ROOT_DIR = Path(__file__).parent.parent
 load_dotenv(ROOT_DIR / '.env')
 
+_config_logger = logging.getLogger("config")
+
+def _get_secret(env_var: str, fallback_warning: str) -> str:
+    val = os.getenv(env_var)
+    if val:
+        return val
+    _config_logger.warning(fallback_warning)
+    return secrets.token_urlsafe(32)
+
 class Settings:
     """Application settings configuration"""
-    
+
     # App Configuration
     APP_NAME: str = os.getenv("APP_NAME", "GVD CRM API")
     APP_DESCRIPTION: str = os.getenv("APP_DESCRIPTION", "A comprehensive B2B Multi-Channel CRM system")
     VERSION: str = os.getenv("VERSION", "1.0.0")
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
-    
+
     # Environment
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
-    
+
     # Server Configuration
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
-    
+
     # Database Configuration
     MONGODB_URL: str = os.getenv("MONGO_URL", "mongodb://localhost:27017")
     DATABASE_NAME: str = os.getenv("DB_NAME", "gvd_crm_db")
-    
-    # Security Configuration
-    SECRET_KEY: str = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
-    JWT_SECRET: str = os.getenv("JWT_SECRET", secrets.token_urlsafe(32))
+
+    # Security Configuration — warn if env vars not set (sessions break on restart)
+    SECRET_KEY: str = _get_secret(
+        "SECRET_KEY",
+        "SECRET_KEY not set in environment — using generated value. All sessions will reset on restart!"
+    )
+    JWT_SECRET: str = _get_secret(
+        "JWT_SECRET",
+        "JWT_SECRET not set in environment — using generated value. All tokens will be invalidated on restart!"
+    )
     JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRATION_HOURS: int = int(os.getenv("JWT_EXPIRATION_HOURS", "24"))
+    JWT_EXPIRATION_HOURS: int = int(os.getenv("JWT_EXPIRATION_HOURS", "8"))
     JWT_REFRESH_EXPIRATION_DAYS: int = int(os.getenv("JWT_REFRESH_EXPIRATION_DAYS", "30"))
-    
-    # CORS Configuration
-    CORS_ORIGINS: List[str] = os.getenv("CORS_ORIGINS", "*").split(",")
+
+    # CORS Configuration — defaults to localhost dev only; set CORS_ORIGINS in .env for production
+    CORS_ORIGINS: List[str] = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: List[str] = ["*"]
     CORS_ALLOW_HEADERS: List[str] = ["*"]
@@ -70,7 +86,7 @@ class Settings:
     CACHE_EXPIRATION_SECONDS: int = int(os.getenv("CACHE_EXPIRATION_SECONDS", "300"))  # 5 minutes
     
     # Rate Limiting
-    RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+    RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "300"))
     
     # Pagination
     DEFAULT_PAGE_SIZE: int = int(os.getenv("DEFAULT_PAGE_SIZE", "50"))

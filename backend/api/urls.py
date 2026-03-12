@@ -12,18 +12,18 @@ from apps.business.warehouse.views import router as warehouse_router
 from apps.support.views import router as support_router
 from apps.support.ticket_views import router as ticket_lifecycle_router
 
-# Standalone entity module (moved from leads/)
+# Standalone entity module + customer master
 from apps.entities.views import router as entity_router
+from apps.entities.customer_views import router as customer_router
 from apps.business.leads.assignment_views import router as assignment_router
 from apps.business.leads.lead_document_views import router as lead_document_router
 from apps.business.leads.lead_involvement_views import router as lead_involvement_router
 from apps.business.workflow.comment_views import router as comment_router
 from apps.business.workflow.remark_views import router as remark_router
+from apps.business.workflow.notification_views import router as notification_router
 from apps.business.workflow.document_views import router as document_router
 from apps.business.workflow.template_views import router as template_router
 from apps.business.workflow.warranty_views import router as warranty_router
-from apps.enquiries.views import router as enquiry_router
-
 from core.auth import get_current_user
 from core.database import get_database
 
@@ -101,17 +101,16 @@ api_router.include_router(ticket_lifecycle_router, prefix="/support", tags=["Tic
 
 # New standalone resource routers
 api_router.include_router(entity_router, prefix="/entities", tags=["Entities"])
+api_router.include_router(customer_router, prefix="/customers", tags=["Customers"])
 api_router.include_router(assignment_router, prefix="/assignments", tags=["Assignments"])
 api_router.include_router(lead_document_router, prefix="/lead-documents", tags=["Lead Documents"])
 api_router.include_router(lead_involvement_router, prefix="/lead-involvements", tags=["Lead Involvements"])
 api_router.include_router(comment_router, prefix="/comments", tags=["Comments"])
 api_router.include_router(remark_router, prefix="/remarks", tags=["Remarks"])
+api_router.include_router(notification_router, prefix="/notifications", tags=["Notifications"])
 api_router.include_router(document_router, prefix="/documents", tags=["Documents"])
 api_router.include_router(template_router, prefix="/templates", tags=["Templates"])
 api_router.include_router(warranty_router, prefix="/warranties", tags=["Warranties"])
-
-# Enquiry Management
-api_router.include_router(enquiry_router, prefix="/enquiries", tags=["Enquiries"])
 
 # Inventory Management
 api_router.include_router(inventory_router, prefix="/inventory", tags=["Inventory Management"])

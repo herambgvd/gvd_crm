@@ -94,6 +94,10 @@ class ProductResponse(BaseModel):
     last_stock_take_date: Optional[datetime] = None
     # Legacy compatibility
     stock_quantity: int = 0  # Same as total_quantity
+    # Frontend-friendly aliases (populated by _product_response)
+    product_name: str = ""   # alias for name
+    product_code: str = ""   # alias for sku
+    unit: str = ""           # alias for unit_of_measure
     # Metadata
     created_by: str = ""
     created_at: Optional[datetime] = None

@@ -34,9 +34,10 @@ async def login(login_data: LoginRequest):
             detail="User account is disabled"
         )
     
-    # Create access token
+    # Create tokens
     access_token = auth_service.create_access_token(data={"sub": user.id})
-    
+    refresh_token = auth_service.create_refresh_token(data={"sub": user.id})
+
     # Update last login
     from core.database import get_database
     db = get_database()
@@ -44,13 +45,14 @@ async def login(login_data: LoginRequest):
         {"id": user.id},
         {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}}
     )
-    
+
     return LoginResponse(
         access_token=access_token,
+        refresh_token=refresh_token,
         token_type="bearer",
         expires_in=settings.JWT_EXPIRATION_HOURS * 3600,
         user=UserResponse.from_user(user)
-    ) 
+    )
 
 @router.post("/register", response_model=UserResponse)
 async def register(
@@ -93,8 +95,34 @@ async def change_password(
 @router.post("/logout")
 async def logout(current_user: User = Depends(get_current_user)):
     """Logout current user"""
-    # In a real implementation, you might want to blacklist the token
     return {"message": "Successfully logged out"}
+
+
+@router.post("/refresh", response_model=TokenResponse)
+async def refresh_token(refresh_data: "RefreshTokenRequest"):
+    """Issue a new access token using a valid refresh token."""
+    from .schemas import RefreshTokenRequest
+    from core.auth import AuthenticationError
+
+    try:
+        payload = auth_service.verify_token(refresh_data.refresh_token, "refresh")
+        user_id: str = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    except AuthenticationError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
+
+    user = await auth_service.get_user_by_id(user_id)
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+
+    new_access_token = auth_service.create_access_token(data={"sub": user.id})
+    return TokenResponse(
+        access_token=new_access_token,
+        token_type="bearer",
+        expires_in=settings.JWT_EXPIRATION_HOURS * 3600,
+    )
+
 
 # User management endpoints (admin only)
 @router.post("/users", response_model=UserResponse)

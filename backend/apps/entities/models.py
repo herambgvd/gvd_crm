@@ -26,7 +26,7 @@ class EntityStatus(str, Enum):
 
 
 class Entity(BaseModel):
-    """Entity model — consultants, dealers, system integrators, etc."""
+    """Entity model — consultants, dealers, system integrators, customers, etc."""
     model_config = ConfigDict(extra="ignore")
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -47,6 +47,24 @@ class Entity(BaseModel):
     notes: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
     status: str = "active"
+    created_by: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    is_deleted: bool = False
+
+
+class TeamMember(BaseModel):
+    """Contact person / team member within an Entity (company)."""
+    model_config = ConfigDict(extra="ignore")
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    entity_id: str                          # parent entity
+    name: str
+    designation: Optional[str] = None      # job title
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    is_primary_contact: bool = False
+    notes: Optional[str] = None
     created_by: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

@@ -49,19 +49,16 @@ class EntityService(BaseCRUDService):
             sort=[("created_at", -1)],
         )
 
-    async def search_entities(self, term: str, limit: int = 10):
-        """Quick-search for entity connections (autocomplete)."""
-        if not term:
-            return []
-
-        query = {
-            "is_deleted": {"$ne": True},
-            "status": "active",
-            "$or": [
+    async def search_entities(self, term: str, limit: int = 10, entity_type: str = None):
+        """Quick-search for entity connections (autocomplete), with optional type filter."""
+        query = {"is_deleted": {"$ne": True}, "status": {"$ne": "inactive"}}
+        if entity_type:
+            query["entity_type"] = entity_type
+        if term:
+            query["$or"] = [
                 {"company_name": {"$regex": term, "$options": "i"}},
                 {"contact_person": {"$regex": term, "$options": "i"}},
-            ],
-        }
+            ]
 
         docs = (
             await self.collection
@@ -70,6 +67,46 @@ class EntityService(BaseCRUDService):
             .to_list(limit)
         )
         return docs
+
+    async def search_entities_by_type(self, term: str, entity_type: str, limit: int = 10):
+        """Quick-search filtered by entity_type (e.g. end_customer, consultant)."""
+        query = {
+            "is_deleted": {"$ne": True},
+            "status": {"$ne": "inactive"},
+            "entity_type": entity_type,
+        }
+        if term:
+            query["$or"] = [
+                {"company_name": {"$regex": term, "$options": "i"}},
+                {"contact_person": {"$regex": term, "$options": "i"}},
+            ]
+
+        docs = (
+            await self.collection
+            .find(query, {
+                "_id": 0, "id": 1, "company_name": 1, "entity_type": 1,
+                "contact_person": 1, "phone": 1, "email": 1,
+            })
+            .limit(limit)
+            .to_list(limit)
+        )
+        return docs
+
+
+    async def create_team_member(self, doc: dict) -> dict:
+        """Insert a TeamMember document into entity_team_members collection."""
+        import uuid
+        from datetime import datetime, timezone
+        from core.database import get_database
+
+        db = get_database()
+        doc.setdefault("id", str(uuid.uuid4()))
+        doc.setdefault("created_at", datetime.now(timezone.utc).isoformat())
+        doc.setdefault("updated_at", datetime.now(timezone.utc).isoformat())
+        doc.setdefault("is_deleted", False)
+        await db.entity_team_members.insert_one(doc)
+        doc.pop("_id", None)
+        return doc
 
 
 # Singleton

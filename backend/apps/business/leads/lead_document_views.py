@@ -9,9 +9,23 @@ import uuid
 import shutil
 
 from core.permissions import require_permission
+from core.auth import get_current_user
+from core.database import get_database
 from apps.authentication.models import User
 from .schemas import LeadDocumentResponse
 from .service import lead_document_service, lead_service
+
+
+async def _enrich_doc_with_uploader(doc: dict, db) -> LeadDocumentResponse:
+    d = LeadDocumentResponse(**doc)
+    if doc.get("uploaded_by"):
+        user = await db.users.find_one(
+            {"id": doc["uploaded_by"]},
+            {"_id": 0, "first_name": 1, "last_name": 1},
+        )
+        if user:
+            d.uploaded_by_name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
+    return d
 
 router = APIRouter(tags=["lead-documents"])
 
@@ -22,11 +36,12 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 @router.get("/lead/{lead_id}", response_model=List[LeadDocumentResponse])
 async def get_lead_documents(
     lead_id: str,
-    current_user: User = Depends(require_permission("leads:view")),
+    current_user: User = Depends(get_current_user),
 ):
-    """Get all documents for a lead."""
+    """Get all documents for a lead, enriched with uploader name."""
     items = await lead_document_service.get_lead_documents(lead_id)
-    return [LeadDocumentResponse(**doc) for doc in items]
+    db = get_database()
+    return [await _enrich_doc_with_uploader(doc, db) for doc in items]
 
 
 @router.post("", response_model=LeadDocumentResponse)
@@ -65,7 +80,8 @@ async def upload_lead_document(
         "uploaded_by": current_user.id,
     }
     doc = await lead_document_service.create(data, user_id=current_user.id)
-    return LeadDocumentResponse(**doc)
+    db = get_database()
+    return await _enrich_doc_with_uploader(doc, db)
 
 
 @router.delete("/{document_id}")

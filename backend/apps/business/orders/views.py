@@ -51,6 +51,43 @@ async def get_boq(
     return boq
 
 
+@router.get("/boqs/{boq_id}/version-history")
+async def get_boq_version_history(
+    boq_id: str,
+    current_user=Depends(require_permission("orders:view")),
+):
+    """Get version history for a BOQ."""
+    boq = await boq_service.get_by_id(boq_id)
+    if not boq:
+        raise HTTPException(status_code=404, detail="BOQ not found")
+    snapshots = await boq_service.get_version_history(boq_id)
+
+    # Transform raw snapshots into the shape the frontend expects
+    formatted = []
+    for snap in snapshots:
+        v_from = int(snap.get("version", 1))
+        v_to = v_from + 1
+        formatted.append({
+            "version_from": v_from,
+            "version_to": v_to,
+            "timestamp": snap.get("snapshot_at") or snap.get("updated_at", ""),
+            "updated_by": snap.get("updated_by_on_save") or snap.get("updated_by", ""),
+            "change_summary": f"Updated from v{v_from} to v{v_to}",
+            "detailed_changes": [],
+            "impact_analysis": None,
+            "total_amount": snap.get("total_amount", 0),
+            "items_count": len(snap.get("items", [])),
+        })
+
+    return {
+        "boq_id": boq_id,
+        "boq_number": boq.get("boq_number") or boq.get("name", ""),
+        "project_name": boq.get("project_name", ""),
+        "current_version": boq.get("version", 1),
+        "version_history": formatted,
+    }
+
+
 @router.post("/boqs/")
 async def create_boq(
     data: BOQCreate,

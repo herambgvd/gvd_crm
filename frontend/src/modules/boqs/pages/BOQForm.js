@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "../../../components";
 import { createBOQ, updateBOQ, fetchBOQ } from "../api";
-import { fetchProducts } from "../../products/api";
+import { fetchProducts, fetchAllCategories } from "../../products/api";
 import { fetchLead, fetchLeadInvolvements } from "../../leads/api";
 import { fetchDefaultTemplate } from "../../settings/api";
 import { fetchEntity } from "../../entities/api";
@@ -235,16 +235,15 @@ const BOQTemplatePreview = ({ boqData, template }) => {
                         </td>
                         <td className="px-4 py-3 border w-1/6">
                           <p className="text-sm font-medium text-gray-900">
-                            {item.product_code
-                              ? `${item.product_code} - ${
-                                  item.item_name || "Unnamed Item"
-                                }`
-                              : item.item_name || "Unnamed Item"}
+                            {item.item_name || "Unnamed Item"}
                           </p>
+                          {item.product_code && item.product_code !== item.item_name && (
+                            <p className="text-xs text-gray-500 mt-0.5">{item.product_code}</p>
+                          )}
                         </td>
                         <td className="px-4 py-3 border w-2/5">
                           <div>
-                            {item.description && (
+                            {item.description && item.description !== item.item_name && (
                               <p className="text-xs text-gray-600 mb-2">
                                 {item.description}
                               </p>
@@ -438,6 +437,46 @@ const BOQForm = () => {
     queryFn: () => fetchProducts({ page_size: 500 }),
   });
   const products = productsData?.items || [];
+
+  // Fetch all categories from the dedicated API
+  const { data: allCategoriesData } = useQuery({
+    queryKey: ["categories", "all"],
+    queryFn: fetchAllCategories,
+  });
+  const allCategories = allCategoriesData || [];
+
+  const [selectedCategoryName, setSelectedCategoryName] = useState("");
+  const [selectedSubcategoryName, setSelectedSubcategoryName] = useState("");
+
+  // Top-level categories (no parent)
+  const topCategories = React.useMemo(
+    () => allCategories.filter((c) => !c.parent_category_id && c.is_active !== false),
+    [allCategories]
+  );
+
+  // Subcategories of the selected top-level category
+  const subCategories = React.useMemo(() => {
+    if (!selectedCategoryName) return [];
+    const parent = topCategories.find((c) => c.name === selectedCategoryName);
+    if (!parent) return [];
+    return allCategories.filter(
+      (c) => c.parent_category_id === parent.id && c.is_active !== false
+    );
+  }, [allCategories, topCategories, selectedCategoryName]);
+
+  // Products filtered by selected category + subcategory name.
+  // When subcategory is selected, show products matching that subcategory
+  // OR products with no subcategory set (they belong to the category generally).
+  const filteredProducts = React.useMemo(() => {
+    let result = products;
+    if (selectedCategoryName)
+      result = result.filter((p) => p.category === selectedCategoryName);
+    if (selectedSubcategoryName)
+      result = result.filter(
+        (p) => p.subcategory === selectedSubcategoryName || !p.subcategory
+      );
+    return result;
+  }, [products, selectedCategoryName, selectedSubcategoryName]);
 
   const { data: lead } = useQuery({
     queryKey: ["lead", derivedLeadId],
@@ -734,6 +773,24 @@ const BOQForm = () => {
     }
   }, [lead, isEdit]);
 
+  // Auto-populate from_data from default template when creating a new BOQ
+  useEffect(() => {
+    if (!isEdit && boqTemplate) {
+      const fromData = {
+        company_name: boqTemplate.company_name || "",
+        address: boqTemplate.company_address || "",
+        phone: boqTemplate.company_phone || "",
+        email: boqTemplate.company_email || "",
+        website: boqTemplate.company_website || "",
+        gst: boqTemplate.company_gst || "",
+      };
+      // Only set if at least one field has a value
+      if (Object.values(fromData).some((v) => v)) {
+        setFormData((prev) => ({ ...prev, from_data: fromData }));
+      }
+    }
+  }, [isEdit, boqTemplate]);
+
   const createMutation = useMutation({
     mutationFn: createBOQ,
     onSuccess: (data) => {
@@ -802,32 +859,6 @@ const BOQForm = () => {
       );
     }
   };
-
-  // Group products by category
-  const groupedProducts = React.useMemo(() => {
-    if (!products) return {};
-
-    const groups = {};
-    products.forEach((product) => {
-      const category = product.category || "Uncategorized";
-      if (!groups[category]) {
-        groups[category] = [];
-      }
-      groups[category].push(product);
-    });
-
-    // Sort categories and products within each category
-    const sortedGroups = {};
-    Object.keys(groups)
-      .sort()
-      .forEach((category) => {
-        sortedGroups[category] = groups[category].sort((a, b) =>
-          a.product_name.localeCompare(b.product_name),
-        );
-      });
-
-    return sortedGroups;
-  }, [products]);
 
   // Calculate percentage markup from unit_price to price
   const calculatePercentage = (unitPrice, price) => {
@@ -1129,13 +1160,35 @@ const BOQForm = () => {
                           leadInvolvements?.length || 0
                         }`}
                         value={formData.involvement_id}
-                        onValueChange={(value) =>
+                        onValueChange={(value) => {
+                          const selectedInv = leadInvolvements?.find(
+                            (inv) => inv.id === value
+                          );
+                          const entity = selectedInv?.entity_data;
+                          const toData = entity
+                            ? {
+                                company_name: entity.company_name || "",
+                                address: [
+                                  entity.address,
+                                  entity.city,
+                                  entity.state,
+                                  entity.pincode,
+                                ]
+                                  .filter(Boolean)
+                                  .join(", "),
+                                phone: entity.phone || entity.alternate_phone || "",
+                                email: entity.email || "",
+                                gst: entity.gstin || "",
+                                website: entity.website || "",
+                              }
+                            : {};
                           setFormData((prev) => ({
                             ...prev,
                             involvement_id: value,
                             channel: "direct",
-                          }))
-                        }
+                            to_data: toData,
+                          }));
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue
@@ -1185,8 +1238,88 @@ const BOQForm = () => {
                   {/* Product Selection */}
                   <div className="border rounded-md p-4 space-y-4">
                     <h3 className="font-semibold">Add Products</h3>
-                    <div className="grid grid-cols-6 gap-3">
-                      <div className="col-span-3">
+
+                    {/* Row 1: Category → Subcategory → Product */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <Label>Category</Label>
+                        <Select
+                          value={selectedCategoryName}
+                          onValueChange={(val) => {
+                            setSelectedCategoryName(val);
+                            setSelectedSubcategoryName("");
+                            setCurrentItem((prev) => ({
+                              ...prev,
+                              product_id: "",
+                              item_name: "",
+                              product_code: "",
+                              description: "",
+                              specifications: [],
+                              unit: "",
+                              unit_price: 0,
+                              price: 0,
+                              percentage: 0,
+                              total_price: 0,
+                            }));
+                            setProductSearchValue("");
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="All categories" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {topCategories.map((cat) => (
+                              <SelectItem key={cat.id} value={cat.name}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>Subcategory</Label>
+                        <Select
+                          value={selectedSubcategoryName}
+                          onValueChange={(val) => {
+                            setSelectedSubcategoryName(val);
+                            setCurrentItem((prev) => ({
+                              ...prev,
+                              product_id: "",
+                              item_name: "",
+                              product_code: "",
+                              description: "",
+                              specifications: [],
+                              unit: "",
+                              unit_price: 0,
+                              price: 0,
+                              percentage: 0,
+                              total_price: 0,
+                            }));
+                            setProductSearchValue("");
+                          }}
+                          disabled={subCategories.length === 0}
+                        >
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                subCategories.length === 0
+                                  ? "No subcategories"
+                                  : "All subcategories"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {subCategories.map((sub) => (
+                              <SelectItem key={sub.id} value={sub.name}>
+                                {sub.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
                         <Label htmlFor="product">Product</Label>
                         <Popover
                           open={productSearchOpen}
@@ -1206,48 +1339,50 @@ const BOQForm = () => {
                               <ArrowLeft className="ml-2 h-4 w-4 shrink-0 opacity-50 rotate-90" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-[400px] p-0">
+                          <PopoverContent className="w-[380px] p-0">
                             <Command>
                               <CommandInput
                                 placeholder="Search products..."
                                 className="h-9"
                               />
                               <CommandEmpty>No product found.</CommandEmpty>
-                              {Object.entries(groupedProducts).map(
-                                ([category, categoryProducts]) => (
-                                  <CommandGroup
-                                    key={category}
-                                    heading={category}
+                              <CommandGroup>
+                                {filteredProducts.map((product) => (
+                                  <CommandItem
+                                    key={product.id}
+                                    value={`${product.product_code} ${product.product_name}`}
+                                    onSelect={() =>
+                                      handleProductSelect(product.id)
+                                    }
+                                    className="flex flex-col items-start py-2"
                                   >
-                                    {categoryProducts.map((product) => (
-                                      <CommandItem
-                                        key={product.id}
-                                        value={`${product.product_code} ${product.product_name}`}
-                                        onSelect={() =>
-                                          handleProductSelect(product.id)
-                                        }
-                                        className="flex flex-col items-start py-2"
-                                      >
-                                        <div className="font-medium text-sm">
-                                          {product.product_code} -{" "}
-                                          {product.product_name}
-                                        </div>
-                                        <div className="text-xs text-gray-500 flex gap-4">
-                                          <span>Unit: {product.unit}</span>
-                                          <span>
-                                            Price: ₹
-                                            {product.unit_price?.toLocaleString()}
-                                          </span>
-                                        </div>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                ),
-                              )}
+                                    <div className="font-medium text-sm">
+                                      {product.product_code} -{" "}
+                                      {product.product_name}
+                                    </div>
+                                    <div className="text-xs text-gray-500 flex gap-4">
+                                      {product.subcategory && (
+                                        <span className="text-blue-500">
+                                          {product.subcategory}
+                                        </span>
+                                      )}
+                                      <span>Unit: {product.unit}</span>
+                                      <span>
+                                        Price: ₹
+                                        {product.unit_price?.toLocaleString()}
+                                      </span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
                             </Command>
                           </PopoverContent>
                         </Popover>
                       </div>
+                    </div>
+
+                    {/* Row 2: Qty / Unit Price / Selling Price / Markup / Add */}
+                    <div className="grid grid-cols-5 gap-3">
                       <div>
                         <Label htmlFor="quantity">Quantity</Label>
                         <Input
@@ -1273,17 +1408,9 @@ const BOQForm = () => {
                           type="number"
                           step="0.01"
                           value={currentItem.unit_price}
-                          onChange={(e) => {
-                            const unitPrice = Number(e.target.value);
-                            const updatedItem = updateCurrentItemCalculations({
-                              ...currentItem,
-                              unit_price: unitPrice,
-                              price: currentItem.price || unitPrice, // Keep current price if set, otherwise use unit price
-                            });
-                            setCurrentItem(updatedItem);
-                          }}
-                          data-testid="unit-price-input"
                           disabled
+                          className="bg-gray-50"
+                          data-testid="unit-price-input"
                         />
                       </div>
                       <div>
@@ -1559,16 +1686,18 @@ const BOQForm = () => {
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-2">
-                                      <span className="text-sm font-mono font-medium text-blue-600">
-                                        {item.product_code || "N/A"}
-                                      </span>
+                                      {item.product_code && item.product_code !== item.item_name && (
+                                        <span className="text-sm font-mono font-medium text-blue-600">
+                                          {item.product_code}
+                                        </span>
+                                      )}
                                       <span className="text-sm font-semibold">
                                         {item.item_name}
                                       </span>
                                     </div>
 
-                                    {/* Description */}
-                                    {item.description && (
+                                    {/* Description — only show if different from item_name */}
+                                    {item.description && item.description !== item.item_name && (
                                       <p className="text-xs text-gray-600 mb-2 leading-relaxed">
                                         {item.description}
                                       </p>

@@ -50,6 +50,11 @@ DEFAULT_PERMISSIONS = [
     {"name": "Create Entities", "codename": "entities:create", "resource": "entities", "action": "create"},
     {"name": "Edit Entities", "codename": "entities:edit", "resource": "entities", "action": "edit"},
     {"name": "Delete Entities", "codename": "entities:delete", "resource": "entities", "action": "delete"},
+    # Customers
+    {"name": "View Customers", "codename": "customers:view", "resource": "customers", "action": "view"},
+    {"name": "Create Customers", "codename": "customers:create", "resource": "customers", "action": "create"},
+    {"name": "Edit Customers", "codename": "customers:edit", "resource": "customers", "action": "edit"},
+    {"name": "Delete Customers", "codename": "customers:delete", "resource": "customers", "action": "delete"},
     # Products
     {"name": "View Products", "codename": "products:view", "resource": "products", "action": "view"},
     {"name": "Create Products", "codename": "products:create", "resource": "products", "action": "create"},
@@ -108,10 +113,10 @@ DEFAULT_ROLES = {
     },
     "sales": {
         "name": "Sales Executive",
-        "description": "Access to enquiries, leads, orders, entities, products",
+        "description": "Access to leads, customers, entities, orders, products, finance",
         "permissions": [
             p["codename"] for p in DEFAULT_PERMISSIONS
-            if p["resource"] in ("enquiries", "leads", "orders", "entities", "products", "finance")
+            if p["resource"] in ("leads", "customers", "orders", "entities", "products", "finance")
             and p["action"] in ("view", "create", "edit")
         ],
     },

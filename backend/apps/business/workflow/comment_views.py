@@ -15,7 +15,7 @@ router = APIRouter(tags=["comments"])
 @router.get("/lead/{lead_id}")
 async def get_lead_comments(
     lead_id: str,
-    current_user: User = Depends(require_permission("leads:view"))
+    current_user: User = Depends(get_current_user)
 ):
     """Get all comments for a lead"""
     db = get_database()
@@ -58,6 +58,7 @@ async def create_comment(
     }
 
     await db.comments.insert_one(comment)
+    comment.pop('_id', None)
 
     comment['created_at'] = datetime.fromisoformat(comment['created_at'])
     comment['updated_at'] = datetime.fromisoformat(comment['updated_at'])

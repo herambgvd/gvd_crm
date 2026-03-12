@@ -36,7 +36,7 @@ class RemarkUpdateRequest(BaseModel):
 @router.get("/lead/{lead_id}")
 async def get_lead_remarks(
     lead_id: str,
-    current_user: User = Depends(require_permission("leads:view"))
+    current_user: User = Depends(get_current_user)
 ):
     """Get all remarks for a lead"""
     db = get_database()
@@ -84,6 +84,7 @@ async def create_remark(
     }
 
     await db.remarks.insert_one(remark)
+    remark.pop('_id', None)
 
     remark['created_at'] = datetime.fromisoformat(remark['created_at'])
     remark['updated_at'] = datetime.fromisoformat(remark['updated_at'])

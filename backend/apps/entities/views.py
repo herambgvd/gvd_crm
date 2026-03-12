@@ -15,7 +15,7 @@ from core.permissions import require_permission
 from core.database import get_database
 from apps.authentication.models import User
 
-from .schemas import EntityCreate, EntityUpdate
+from .schemas import EntityCreate, EntityUpdate, TeamMemberCreate, TeamMemberUpdate
 from .service import entity_service
 
 router = APIRouter(tags=["entities"])
@@ -66,10 +66,11 @@ async def list_entities(
 async def search_entities(
     q: str = Query("", min_length=0),
     limit: int = Query(10, ge=1, le=50),
+    entity_type: Optional[str] = Query(None),
     current_user: User = Depends(require_permission("entities:view")),
 ):
     """Quick search / autocomplete for entity connections."""
-    return await entity_service.search_entities(q, limit)
+    return await entity_service.search_entities(q, limit, entity_type)
 
 
 @router.get("/{entity_id}")
@@ -170,3 +171,82 @@ async def bulk_upload_entities(
         "success_count": created_count,
         "errors": errors,
     }
+
+
+# ──────────────────────────────────────────────
+# Team Members
+# ──────────────────────────────────────────────
+
+@router.get("/{entity_id}/team-members")
+async def list_team_members(
+    entity_id: str,
+    current_user: User = Depends(require_permission("entities:view")),
+):
+    """List all team members for an entity."""
+    from core.database import get_database
+    db = get_database()
+    docs = await db.entity_team_members.find(
+        {"entity_id": entity_id, "is_deleted": {"$ne": True}},
+        {"_id": 0},
+    ).sort("created_at", -1).to_list(200)
+    return docs
+
+
+@router.post("/{entity_id}/team-members")
+async def create_team_member(
+    entity_id: str,
+    data: TeamMemberCreate,
+    current_user: User = Depends(require_permission("entities:edit")),
+):
+    """Add a team member to an entity."""
+    entity = await entity_service.get_by_id(entity_id)
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    doc = data.model_dump()
+    doc["entity_id"] = entity_id
+    doc["created_by"] = current_user.id
+    return await entity_service.create_team_member(doc)
+
+
+@router.put("/{entity_id}/team-members/{member_id}")
+async def update_team_member(
+    entity_id: str,
+    member_id: str,
+    data: TeamMemberUpdate,
+    current_user: User = Depends(require_permission("entities:edit")),
+):
+    """Update a team member."""
+    from core.database import get_database
+    from datetime import datetime, timezone
+    db = get_database()
+    update_data = data.model_dump(exclude_unset=True)
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.entity_team_members.find_one_and_update(
+        {"id": member_id, "entity_id": entity_id, "is_deleted": {"$ne": True}},
+        {"$set": update_data},
+        return_document=True,
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    result.pop("_id", None)
+    return result
+
+
+@router.delete("/{entity_id}/team-members/{member_id}")
+async def delete_team_member(
+    entity_id: str,
+    member_id: str,
+    current_user: User = Depends(require_permission("entities:edit")),
+):
+    """Soft-delete a team member."""
+    from core.database import get_database
+    from datetime import datetime, timezone
+    db = get_database()
+    result = await db.entity_team_members.update_one(
+        {"id": member_id, "entity_id": entity_id},
+        {"$set": {"is_deleted": True, "updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    return {"message": "Team member removed"}

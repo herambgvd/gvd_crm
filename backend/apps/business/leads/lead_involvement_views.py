@@ -7,6 +7,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from pydantic import BaseModel
 from core.permissions import require_permission
+from core.auth import get_current_user
 from core.database import get_database
 from apps.authentication.models import User
 from .schemas import (
@@ -28,11 +29,20 @@ router = APIRouter(tags=["lead-involvements"])
 @router.get("/lead/{lead_id}", response_model=List[LeadInvolvementResponse])
 async def get_lead_involvements(
     lead_id: str,
-    current_user: User = Depends(require_permission("leads:view")),
+    current_user: User = Depends(get_current_user),
 ):
-    """Get all involvements for a lead."""
+    """Get all involvements for a lead, enriched with entity names."""
     items = await lead_involvement_service.get_lead_involvements(lead_id)
-    return [LeadInvolvementResponse(**doc) for doc in items]
+    db = get_database()
+    result = []
+    for doc in items:
+        inv = LeadInvolvementResponse(**doc)
+        entity = await db.entities.find_one({"id": doc.get("entity_id")}, {"_id": 0})
+        if entity:
+            inv.entity_name = entity.get("company_name")
+            inv.entity_city = entity.get("city")
+        result.append(inv)
+    return result
 
 
 @router.post("", response_model=LeadInvolvementResponse)

@@ -52,6 +52,10 @@ def _product_response(doc: Dict[str, Any]) -> ProductResponse:
         doc["updated_at"] = datetime.fromisoformat(doc["updated_at"])
     # Set stock_quantity for backward compatibility (same as total_quantity)
     doc["stock_quantity"] = doc.get("total_quantity", 0)
+    # Populate frontend-friendly aliases
+    doc["product_name"] = doc.get("name", "")
+    doc["product_code"] = doc.get("sku", "")
+    doc["unit"] = doc.get("unit_of_measure", "piece")
     return ProductResponse(**doc)
 
 
@@ -127,7 +131,7 @@ async def create_product(
 async def get_products(
     current_user: User = Depends(require_permission("products:view")),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=1000),
     category: Optional[str] = None,
     subcategory: Optional[str] = None,
     is_active: Optional[bool] = None,

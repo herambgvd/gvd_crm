@@ -135,7 +135,9 @@ const BOQVersionHistory = ({ boqId, isOpen, onClose }) => {
                             </Badge>
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <Clock className="h-4 w-4" />
-                              {format(new Date(version.timestamp), "PPp")}
+                              {version.timestamp
+                              ? (() => { try { return format(new Date(version.timestamp), "PPp"); } catch { return version.timestamp; } })()
+                              : "—"}
                             </div>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600">

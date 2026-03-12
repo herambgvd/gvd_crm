@@ -1,8 +1,11 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
+from collections import defaultdict
+import time
 import logging
 import os
 
@@ -56,6 +59,21 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
 
+# ─── Simple in-memory rate limiter ───────────────────────────────────────────
+# Tracks request counts per IP per 60-second window.
+_rate_limit_store: dict = defaultdict(lambda: {"count": 0, "window_start": time.time()})
+
+def _rate_limit_check(client_ip: str, limit: int = 60) -> bool:
+    """Returns True if request is allowed, False if rate limit exceeded."""
+    now = time.time()
+    bucket = _rate_limit_store[client_ip]
+    if now - bucket["window_start"] > 60:
+        bucket["count"] = 0
+        bucket["window_start"] = now
+    bucket["count"] += 1
+    return bucket["count"] <= limit
+
+
 def create_application() -> FastAPI:
     """Create and configure FastAPI application"""
     
@@ -69,6 +87,22 @@ def create_application() -> FastAPI:
         redoc_url="/redoc" if settings.DEBUG else None,
     )
     
+    # ── Rate-limit middleware ──────────────────────────────────────────────────
+    @app.middleware("http")
+    async def rate_limit_middleware(request: Request, call_next):
+        # Skip rate limiting for health checks and static files
+        if request.url.path in ("/", "/health", "/api/v1/health") or request.url.path.startswith("/uploads"):
+            return await call_next(request)
+        client_ip = request.client.host if request.client else "unknown"
+        # Apply stricter limit on auth endpoints
+        limit = 20 if "/auth/login" in request.url.path else settings.RATE_LIMIT_PER_MINUTE
+        if not _rate_limit_check(client_ip, limit):
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please slow down."},
+            )
+        return await call_next(request)
+
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,

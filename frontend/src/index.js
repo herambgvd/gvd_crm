@@ -45,27 +45,45 @@ window.console.error = (...args) => {
 };
 
 // 3. Global error handlers
+const THIRD_PARTY_ORIGINS = ["chrome-extension://"];
+
 window.addEventListener('error', (e) => {
+  const src = e.filename || "";
+  if (THIRD_PARTY_ORIGINS.some((o) => src.includes(o))) {
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    return true;
+  }
   if (e.message?.includes('ResizeObserver loop completed with undelivered notifications') ||
       e.message?.includes('ResizeObserver loop limit exceeded')) {
     e.stopImmediatePropagation();
     e.preventDefault();
     return false;
   }
-});
+}, true);
 
 window.addEventListener('unhandledrejection', (e) => {
+  const stack = e.reason?.stack || e.reason?.message || "";
+  if (THIRD_PARTY_ORIGINS.some((o) => stack.includes(o))) {
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    return;
+  }
   if (e.reason?.message?.includes('ResizeObserver loop completed with undelivered notifications') ||
       e.reason?.message?.includes('ResizeObserver loop limit exceeded')) {
     e.preventDefault();
     return false;
   }
-});
+}, true);
 
 // 4. Override window.onerror for additional safety
 const originalOnError = window.onerror;
 window.onerror = (message, source, lineno, colno, error) => {
-  if (typeof message === 'string' && 
+  const src = source || "";
+  if (THIRD_PARTY_ORIGINS.some((o) => src.includes(o))) {
+    return true;
+  }
+  if (typeof message === 'string' &&
       (message.includes('ResizeObserver loop completed with undelivered notifications') ||
        message.includes('ResizeObserver loop limit exceeded'))) {
     return true; // Prevent default error handling

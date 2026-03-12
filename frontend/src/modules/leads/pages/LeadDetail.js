@@ -5,6 +5,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { Layout } from "../../../components";
 import {
   fetchLead,
+  updateLead,
   fetchLeadAssignments,
   createAssignment,
   deleteAssignment,
@@ -37,7 +38,7 @@ import {
 import { fetchPayments } from "../../payments/api";
 import { fetchWarranties } from "../../warranties/api";
 import { fetchUsers } from "../../settings/api";
-import { fetchEntities } from "../../entities/api";
+import { fetchEntities, searchEntities } from "../../entities/api";
 import { Button } from "../../../components/ui/button";
 import {
   Card,
@@ -68,6 +69,13 @@ import {
   AlertDialogTrigger,
 } from "../../../components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../../../components/ui/dialog";
+import {
   Tabs,
   TabsContent,
   TabsList,
@@ -94,6 +102,7 @@ import {
   Download,
   Edit,
   X,
+  Search,
   Truck,
   Settings,
   Eye,
@@ -153,6 +162,16 @@ const LeadDetail = () => {
     { key: "", value: "" },
   ]);
   const [editingInvolvement, setEditingInvolvement] = React.useState(null);
+  // Entity search for involvement dialog
+  const [entitySearchQuery, setEntitySearchQuery] = React.useState("");
+  const [entitySearchResults, setEntitySearchResults] = React.useState([]);
+  const [entitySearching, setEntitySearching] = React.useState(false);
+  const [selectedEntityObj, setSelectedEntityObj] = React.useState(null); // full entity object
+
+  // Tab lazy loading
+  const [activeTab, setActiveTab] = React.useState("boqs");
+  // BOQ bidder filter
+  const [boqBidderFilter, setBoqBidderFilter] = React.useState("all");
 
   const { data: lead, isLoading: isLoadingLead } = useQuery({
     queryKey: ["lead", id],
@@ -162,73 +181,103 @@ const LeadDetail = () => {
   const { data: allBOQs } = useQuery({
     queryKey: ["boqs"],
     queryFn: fetchBOQs,
+    enabled: !!id,
   });
 
   const { data: allOrders } = useQuery({
     queryKey: ["salesOrders"],
     queryFn: fetchSalesOrders,
+    enabled: !!id,
   });
 
   const { data: allInvoices } = useQuery({
     queryKey: ["invoices"],
     queryFn: fetchInvoices,
+    enabled: !!id,
   });
 
   const { data: allPurchaseOrders } = useQuery({
     queryKey: ["purchaseOrders"],
     queryFn: fetchPurchaseOrders,
+    enabled: !!id,
   });
 
   const { data: allPayments } = useQuery({
     queryKey: ["payments"],
     queryFn: fetchPayments,
+    enabled: !!id,
   });
 
   const { data: allWarranties } = useQuery({
     queryKey: ["warranties"],
     queryFn: fetchWarranties,
+    enabled: !!id,
   });
 
   // New module queries
   const { data: users } = useQuery({
     queryKey: ["users"],
     queryFn: fetchUsers,
+    enabled: !!id,
   });
 
   const { data: assignments } = useQuery({
     queryKey: ["lead-assignments", id],
     queryFn: () => fetchLeadAssignments(id),
+    enabled: !!id,
   });
 
   const { data: remarks } = useQuery({
     queryKey: ["lead-remarks", id],
     queryFn: () => fetchLeadRemarks(id),
+    enabled: !!id,
   });
 
   const { data: comments } = useQuery({
     queryKey: ["lead-comments", id],
     queryFn: () => fetchLeadComments(id),
+    enabled: !!id,
   });
 
   const { data: documents } = useQuery({
     queryKey: ["lead-documents", id],
     queryFn: () => fetchLeadDocuments(id),
+    enabled: !!id,
   });
 
-  // Involvement queries
+  // Involvement queries — always loaded (shown in info card + involvement tab)
   const {
     data: entities,
-    error: entitiesError,
-    isLoading: entitiesLoading,
   } = useQuery({
     queryKey: ["entities"],
     queryFn: () => fetchEntities(),
+    enabled: !!id,
   });
 
   const { data: involvements } = useQuery({
     queryKey: ["lead-involvements", id],
     queryFn: () => fetchLeadInvolvements(id),
+    enabled: !!id,
   });
+
+  // Entity search for involvement dialog
+  React.useEffect(() => {
+    if (!involvementDialogOpen || !entitySearchQuery || entitySearchQuery.length < 1) {
+      setEntitySearchResults([]);
+      return;
+    }
+    const typeFilter = involvementType === "consultant" ? "consultant"
+      : involvementType === "distributor" ? "distributor" : null;
+    setEntitySearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const data = await searchEntities(entitySearchQuery, 15, typeFilter);
+        setEntitySearchResults(data);
+      } catch { setEntitySearchResults([]); }
+      finally { setEntitySearching(false); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [entitySearchQuery, involvementType, involvementDialogOpen]);
 
   // Mutations for new modules
   const assignMutation = useMutation({
@@ -351,6 +400,42 @@ const LeadDetail = () => {
     },
   });
 
+  const updateStatusMutation = useMutation({
+    mutationFn: (status) => updateLead(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["lead", id]);
+      queryClient.invalidateQueries(["leads"]);
+      queryClient.invalidateQueries(["lead-stats"]);
+      toast.success("Status updated!");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.detail || "Failed to update status");
+    },
+  });
+
+  const WORKFLOW_NEXT = {
+    new_lead: "under_review",
+    under_review: "solution_design",
+    solution_design: "proposal_submitted",
+    proposal_submitted: "under_negotiation",
+    under_negotiation: "poc_evaluation",
+    poc_evaluation: "price_finalization",
+    price_finalization: "pi_issued",
+    pi_issued: "order_won",
+    order_won: "order_processing",
+    order_processing: "project_execution",
+    project_execution: "project_completed",
+  };
+
+  const STATUS_LABELS = {
+    new_lead: "New Lead", under_review: "Under Review", solution_design: "Solution Design",
+    proposal_submitted: "Proposal Submitted", under_negotiation: "Under Negotiation",
+    poc_evaluation: "POC / Tech Eval", price_finalization: "Price Finalization",
+    pi_issued: "PI Issued", order_won: "Order Won", order_processing: "Order Processing",
+    project_execution: "Project Execution", project_completed: "Project Completed",
+    lost: "Lost",
+  };
+
   const deleteBOQMutation = useMutation({
     mutationFn: deleteBOQ,
     onSuccess: () => {
@@ -405,8 +490,18 @@ const LeadDetail = () => {
   const updateInvolvementMutation = useMutation({
     mutationFn: ({ involvementId, data }) =>
       updateLeadInvolvement(involvementId, data),
-    onSuccess: () => {
+    onSuccess: async (_, variables) => {
       queryClient.invalidateQueries(["lead-involvements", id]);
+      // Sync lead.consultant_entity_id when consultant involvement is updated
+      if (variables.data.involvement_type === "consultant" && variables.data.entity_id) {
+        try {
+          await updateLead(id, {
+            consultant_entity_id: variables.data.entity_id,
+            is_consultant_involved: true,
+          });
+          queryClient.invalidateQueries(["lead", id]);
+        } catch { /* non-critical */ }
+      }
       toast.success("Involvement updated successfully!");
       setInvolvementDialogOpen(false);
       resetInvolvementForm();
@@ -457,8 +552,8 @@ const LeadDetail = () => {
         remarkId: editingRemark.id,
         data: {
           title: remarkTitle,
-          description: remarkDescription,
-          remark_type: remarkType,
+          content: remarkDescription,
+          type: remarkType,
         },
       });
     } else {
@@ -466,8 +561,9 @@ const LeadDetail = () => {
       remarkMutation.mutate({
         lead_id: id,
         title: remarkTitle,
-        description: remarkDescription,
-        remark_type: remarkType,
+        content: remarkDescription || remarkTitle,
+        type: remarkType,
+        entity_type: "lead",
       });
     }
   };
@@ -475,8 +571,8 @@ const LeadDetail = () => {
   const handleEditRemark = (remark) => {
     setEditingRemark(remark);
     setRemarkTitle(remark.title);
-    setRemarkDescription(remark.description || "");
-    setRemarkType(remark.remark_type);
+    setRemarkDescription(remark.content || "");
+    setRemarkType(remark.type || "milestone");
     setRemarkDialogOpen(true);
   };
 
@@ -506,6 +602,9 @@ const LeadDetail = () => {
   // Involvement handlers
   const resetInvolvementForm = () => {
     setSelectedEntityId("");
+    setSelectedEntityObj(null);
+    setEntitySearchQuery("");
+    setEntitySearchResults([]);
     setInvolvementType("consultant");
     setAssignedBOQs([]);
     setAssignedSalesOrders([]);
@@ -591,6 +690,9 @@ const LeadDetail = () => {
   const handleEditInvolvement = (involvement) => {
     setEditingInvolvement(involvement);
     setSelectedEntityId(involvement.entity_id);
+    // Pre-populate entity display so the search box shows current entity name
+    setSelectedEntityObj({ id: involvement.entity_id, company_name: involvement.entity_name || involvement.entity_id });
+    setEntitySearchQuery(involvement.entity_name || "");
     setInvolvementType(involvement.involvement_type);
     setAssignedBOQs(involvement.assigned_boqs || []);
     setAssignedSalesOrders(involvement.sales_order_ids || []);
@@ -642,35 +744,54 @@ const LeadDetail = () => {
     setDeleteType(null);
   };
 
-  const boqs = allBOQs?.filter((b) => b.lead_id === id) || [];
-  const salesOrders = allOrders?.filter((o) => o.lead_id === id) || [];
+  const allLeadBOQs = allBOQs?.items?.filter((b) => b.lead_id === id) || [];
+  // Filter BOQs by bidder entity via involvements
+  const boqs = boqBidderFilter === "all"
+    ? allLeadBOQs
+    : allLeadBOQs.filter((b) => {
+        const inv = involvements?.find((i) => i.id === boqBidderFilter || i.entity_id === boqBidderFilter);
+        return inv ? inv.assigned_boqs?.includes(b.id) : false;
+      });
+  const salesOrders = allOrders?.items?.filter((o) => o.lead_id === id) || [];
 
   // Filter Purchase Orders based on PI (Sales Order) relationship
   const salesOrderIds = salesOrders.map((so) => so.id);
   const purchaseOrders =
-    allPurchaseOrders?.filter((po) => salesOrderIds.includes(po.pi_id)) || [];
+    allPurchaseOrders?.items?.filter((po) =>
+      salesOrderIds.includes(po.pi_id),
+    ) || [];
 
   const orderIds = salesOrders.map((o) => o.id);
   const invoices =
-    allInvoices?.filter((inv) => {
-      const order = allOrders?.find((o) => o.id === inv.sales_order_id);
+    allInvoices?.items?.filter((inv) => {
+      const order = allOrders?.items?.find((o) => o.id === inv.sales_order_id);
       return order && orderIds.includes(order.id);
     }) || [];
 
   const invoiceIds = invoices.map((inv) => inv.id);
   const payments =
-    allPayments?.filter((p) => invoiceIds.includes(p.invoice_id)) || [];
+    allPayments?.items?.filter((p) => invoiceIds.includes(p.invoice_id)) || [];
 
   const warranties =
-    allWarranties?.filter((w) => orderIds.includes(w.sales_order_id)) || [];
+    allWarranties?.items?.filter((w) => orderIds.includes(w.sales_order_id)) ||
+    [];
 
   const getStatusBadge = (status, type = "lead") => {
     const variants = {
       lead: {
-        new: "bg-blue-50 text-blue-700 ring-blue-600/20",
-        qualified: "bg-purple-50 text-purple-700 ring-purple-600/20",
-        contacted: "bg-yellow-50 text-yellow-700 ring-yellow-600/20",
-        converted: "bg-green-50 text-green-700 ring-green-600/20",
+        new_lead: "bg-blue-50 text-blue-700 ring-blue-600/20",
+        under_review: "bg-sky-50 text-sky-700 ring-sky-600/20",
+        solution_design: "bg-violet-50 text-violet-700 ring-violet-600/20",
+        proposal_submitted: "bg-indigo-50 text-indigo-700 ring-indigo-600/20",
+        under_negotiation: "bg-amber-50 text-amber-700 ring-amber-600/20",
+        poc_evaluation: "bg-orange-50 text-orange-700 ring-orange-600/20",
+        price_finalization: "bg-yellow-50 text-yellow-700 ring-yellow-600/20",
+        pi_issued: "bg-lime-50 text-lime-700 ring-lime-600/20",
+        order_won: "bg-green-50 text-green-700 ring-green-600/20",
+        order_processing: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+        project_execution: "bg-teal-50 text-teal-700 ring-teal-600/20",
+        project_completed: "bg-cyan-50 text-cyan-700 ring-cyan-600/20",
+        lost: "bg-red-50 text-red-700 ring-red-600/20",
       },
       boq: {
         draft: "bg-gray-50 text-gray-700 ring-gray-600/20",
@@ -698,9 +819,10 @@ const LeadDetail = () => {
         cancelled: "bg-red-50 text-red-700 ring-red-600/20",
       },
     };
+    const colorClass = variants[type]?.[status] || "bg-gray-50 text-gray-700 ring-gray-600/20";
     return (
-      <Badge className={`${variants[type][status]} ring-1 ring-inset`}>
-        {status.replace("_", " ")}
+      <Badge className={`${colorClass} ring-1 ring-inset`}>
+        {status.replace(/_/g, " ")}
       </Badge>
     );
   };
@@ -742,57 +864,98 @@ const LeadDetail = () => {
         <Card className="border border-gray-200">
           <CardHeader>
             <div className="flex items-start justify-between">
-              <div>
+              <div className="flex-1">
                 <CardTitle className="text-4xl font-bold font-heading text-blue-600">
                   {lead.project_name || "Untitled Project"}
                 </CardTitle>
-                <p className="text-lg text-gray-600 mt-2">
-                  {lead.contact_name} • {lead.company}
-                </p>
-                <div className="flex items-center gap-2 mt-3">
+                {lead.customer_name && (
+                  <p className="text-lg text-gray-600 mt-2 flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    {lead.customer_name}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
                   {getStatusBadge(lead.status, "lead")}
-                  <Badge variant="outline">{lead.channel}</Badge>
+                  <Badge variant="outline" className="capitalize">{lead.priority}</Badge>
                 </div>
               </div>
+              {/* Workflow progression */}
+              {lead.status !== "project_completed" && lead.status !== "lost" && (
+                <div className="flex gap-2 ml-4">
+                  {WORKFLOW_NEXT[lead.status] && (
+                    <Button
+                      size="sm"
+                      onClick={() => updateStatusMutation.mutate(WORKFLOW_NEXT[lead.status])}
+                      disabled={updateStatusMutation.isPending}
+                    >
+                      → {STATUS_LABELS[WORKFLOW_NEXT[lead.status]]}
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    onClick={() => updateStatusMutation.mutate("lost")}
+                    disabled={updateStatusMutation.isPending}
+                  >
+                    Mark Lost
+                  </Button>
+                </div>
+              )}
             </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Building className="h-4 w-4 text-gray-500" />
-                  <span className="font-medium">Company:</span>
-                  <span>{lead.company}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-500" />
-                  <span className="font-medium">Contact Person:</span>
-                  <span>{lead.contact_name}</span>
-                </div>
-                {lead.contact_email && (
+                {lead.customer_name && (
                   <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-gray-500" />
-                    <span className="font-medium">Email:</span>
-                    <span className="font-mono text-sm">
-                      {lead.contact_email}
+                    <Building className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">Customer:</span>
+                    <span>{lead.customer_name}</span>
+                  </div>
+                )}
+                {involvements?.filter((inv) => inv.involvement_type === "consultant").map((inv) => (
+                  <div key={inv.id} className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">Consultant:</span>
+                    <span className="text-sm text-gray-600">{inv.entity_name || inv.entity_id}</span>
+                  </div>
+                ))}
+                {involvements?.filter((inv) => inv.involvement_type === "si").length > 0 && (
+                  <div className="flex items-start gap-2">
+                    <Settings className="h-4 w-4 text-gray-500 mt-0.5" />
+                    <span className="font-medium">Bidders:</span>
+                    <span className="text-sm text-gray-600">
+                      {involvements.filter((inv) => inv.involvement_type === "si").map((inv) => inv.entity_name || inv.entity_id).join(", ")}
                     </span>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-gray-500" />
-                  <span className="font-medium">Phone:</span>
-                  <span className="font-mono text-sm">
-                    {lead.contact_phone}
-                  </span>
-                </div>
+                {lead.assigned_to && (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">Assigned To:</span>
+                    <span>{lead.assigned_to}</span>
+                  </div>
+                )}
+                {lead.expected_value && (
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Expected Value:</span>
+                    <span className="text-green-600 font-semibold">
+                      ₹{Number(lead.expected_value).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="space-y-3">
                 <div>
                   <span className="font-medium">Source:</span> {lead.source}
                 </div>
-                <div>
-                  <span className="font-medium">Channel:</span> {lead.channel}
-                </div>
+                {lead.expected_close_date && (
+                  <div>
+                    <span className="font-medium">Expected Close:</span>{" "}
+                    {new Date(lead.expected_close_date).toLocaleDateString("en-IN")}
+                  </div>
+                )}
                 {lead.notes && (
                   <div>
                     <span className="font-medium">Notes:</span>
@@ -833,7 +996,7 @@ const LeadDetail = () => {
         {/* Tabs for Related Data */}
         <Card className="border border-gray-200">
           <CardContent className="pt-6">
-            <Tabs defaultValue="boqs" className="w-full">
+            <Tabs defaultValue="boqs" className="w-full" onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-10 h-auto p-1">
                 <TabsTrigger value="boqs" className="text-xs py-2">
                   BOQs ({boqs.length})
@@ -869,8 +1032,25 @@ const LeadDetail = () => {
 
               {/* BOQs Tab */}
               <TabsContent value="boqs" className="space-y-4 mt-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold">BOQs</h3>
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold">BOQs</h3>
+                    {involvements?.filter((inv) => inv.involvement_type === "si").length > 0 && (
+                      <Select value={boqBidderFilter} onValueChange={setBoqBidderFilter}>
+                        <SelectTrigger className="w-48 h-8 text-xs">
+                          <SelectValue placeholder="Filter by bidder" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Bidders</SelectItem>
+                          {involvements.filter((inv) => inv.involvement_type === "si").map((inv) => (
+                            <SelectItem key={inv.id} value={inv.entity_id}>
+                              {inv.entity_name || inv.entity_id}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
                   <Button
                     size="sm"
                     onClick={() => navigate(`/boqs/new?lead_id=${id}`)}
@@ -937,7 +1117,7 @@ const LeadDetail = () => {
                               {boq.items.length} items
                             </p>
                             <p className="font-mono font-semibold text-lg text-green-600">
-                              ₹{boq.total_amount.toLocaleString()}
+                              ₹{(boq.total_amount ?? 0).toLocaleString()}
                             </p>
                           </div>
 
@@ -1094,7 +1274,7 @@ const LeadDetail = () => {
                                 </p>
                               )}
                               <p className="font-mono font-semibold text-lg text-green-600">
-                                ₹{order.total_amount.toLocaleString()}
+                                ₹{(order.total_amount ?? 0).toLocaleString()}
                               </p>
                               {order.items && order.items.length > 0 && (
                                 <p className="text-xs text-gray-500 mt-1">
@@ -1196,7 +1376,7 @@ const LeadDetail = () => {
                               Vendor: {po.vendor_name}
                             </p>
                             <p className="font-mono font-semibold">
-                              ₹{po.total_amount.toLocaleString()}
+                              ₹{(po.total_amount ?? 0).toLocaleString()}
                             </p>
                             {po.delivery_date && (
                               <p className="text-sm text-gray-600">
@@ -1281,7 +1461,7 @@ const LeadDetail = () => {
                         <div className="flex justify-between items-start">
                           <div className="space-y-2">
                             <p className="font-mono font-semibold">
-                              ₹{payment.amount.toLocaleString()}
+                              ₹{(payment.amount ?? 0).toLocaleString()}
                             </p>
                             <p className="text-sm text-gray-600 capitalize">
                               {payment.payment_method.replace("_", " ")}
@@ -1680,7 +1860,7 @@ const LeadDetail = () => {
                 )}
 
                 {/* Add/Edit Involvement Dialog */}
-                <AlertDialog
+                <Dialog
                   open={involvementDialogOpen}
                   onOpenChange={(open) => {
                     setInvolvementDialogOpen(open);
@@ -1689,19 +1869,14 @@ const LeadDetail = () => {
                     }
                   }}
                 >
-                  <AlertDialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>
                         {editingInvolvement
                           ? "Edit Involvement"
                           : "Add Involvement"}
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {editingInvolvement
-                          ? "Update involvement details"
-                          : "Add a consultant, distributor, or SI to this lead"}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
+                      </DialogTitle>
+                    </DialogHeader>
 
                     <div className="space-y-6 py-4">
                       {/* Basic Information */}
@@ -1710,7 +1885,14 @@ const LeadDetail = () => {
                           <Label htmlFor="involvement-type">Type *</Label>
                           <Select
                             value={involvementType}
-                            onValueChange={setInvolvementType}
+                            onValueChange={(val) => {
+                              setInvolvementType(val);
+                              // Clear entity selection when type changes
+                              setSelectedEntityObj(null);
+                              setSelectedEntityId("");
+                              setEntitySearchQuery("");
+                              setEntitySearchResults([]);
+                            }}
                           >
                             <SelectTrigger id="involvement-type">
                               <SelectValue />
@@ -1730,88 +1912,55 @@ const LeadDetail = () => {
                         </div>
 
                         <div>
-                          <Label htmlFor="entity-select">Entity *</Label>
-                          <Select
-                            value={selectedEntityId}
-                            onValueChange={setSelectedEntityId}
-                          >
-                            <SelectTrigger id="entity-select">
-                              <SelectValue placeholder="Select entity" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {entities && entities.length > 0
-                                ? entities
-                                    .filter((entity) => {
-                                      const entityType = entity.entity_type;
-                                      if (involvementType === "consultant") {
-                                        return (
-                                          entityType === "Consultant" ||
-                                          entityType === "consultant"
-                                        );
-                                      } else if (
-                                        involvementType === "distributor"
-                                      ) {
-                                        return (
-                                          entityType === "Distributor" ||
-                                          entityType === "distributor"
-                                        );
-                                      } else if (involvementType === "si") {
-                                        return (
-                                          entityType === "System Integrator" ||
-                                          entityType === "system integrator" ||
-                                          entityType === "SI" ||
-                                          entityType === "si" ||
-                                          entityType === "system_integrator"
-                                        );
-                                      }
-                                      return false;
-                                    })
-                                    .map((entity) => (
-                                      <SelectItem
-                                        key={entity.id}
-                                        value={entity.id}
-                                      >
-                                        {entity.company_name} -{" "}
-                                        {entity.contact_person} (
-                                        {entity.city || "No City"})
-                                      </SelectItem>
-                                    ))
-                                : null}
-                            </SelectContent>
-                          </Select>
-                          {(!entities ||
-                            !entities.filter((e) => {
-                              const entityType = e.entity_type;
-                              if (involvementType === "consultant") {
-                                return (
-                                  entityType === "Consultant" ||
-                                  entityType === "consultant"
-                                );
-                              } else if (involvementType === "distributor") {
-                                return (
-                                  entityType === "Distributor" ||
-                                  entityType === "distributor"
-                                );
-                              } else if (involvementType === "si") {
-                                return (
-                                  entityType === "System Integrator" ||
-                                  entityType === "system integrator" ||
-                                  entityType === "SI" ||
-                                  entityType === "si" ||
-                                  entityType === "system_integrator"
-                                );
-                              }
-                              return false;
-                            }).length) && (
-                            <div className="text-xs text-amber-600 mt-1 p-2 bg-amber-50 rounded">
-                              No{" "}
-                              {involvementType === "si"
-                                ? "system integrator"
-                                : involvementType}{" "}
-                              entities available.
-                              <br />
-                              Please create entities in the Entities section
-                              first.
+                          <Label>Entity *</Label>
+                          {selectedEntityObj ? (
+                            <div className="flex items-center justify-between border border-gray-200 rounded-md px-3 py-2 bg-blue-50">
+                              <span className="text-sm font-medium truncate">{selectedEntityObj.company_name}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedEntityObj(null);
+                                  setSelectedEntityId("");
+                                  setEntitySearchQuery("");
+                                  setEntitySearchResults([]);
+                                }}
+                                className="ml-2 flex-shrink-0"
+                              >
+                                <X className="h-4 w-4 text-gray-500" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                              <Input
+                                value={entitySearchQuery}
+                                onChange={(e) => setEntitySearchQuery(e.target.value)}
+                                placeholder={`Search ${involvementType === "si" ? "system integrator" : involvementType}...`}
+                                className="pl-9"
+                              />
+                              {entitySearching && (
+                                <span className="absolute right-3 top-2.5 text-xs text-gray-400">Searching...</span>
+                              )}
+                              {entitySearchResults.length > 0 && (
+                                <div className="absolute z-50 w-full border border-gray-200 rounded-md bg-white shadow-md mt-1 max-h-40 overflow-y-auto">
+                                  {entitySearchResults.map((e) => (
+                                    <button
+                                      key={e.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedEntityObj(e);
+                                        setSelectedEntityId(e.id);
+                                        setEntitySearchQuery(e.company_name);
+                                        setEntitySearchResults([]);
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between"
+                                    >
+                                      <span>{e.company_name}</span>
+                                      <span className="text-xs text-gray-400">{e.city}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1890,7 +2039,7 @@ const LeadDetail = () => {
                                       >
                                         {boq.boq_number ||
                                           `BOQ-${boq.id.slice(0, 6)}`}{" "}
-                                        (₹{boq.total_amount.toLocaleString()})
+                                        (₹{(boq.total_amount ?? 0).toLocaleString()})
                                       </label>
                                     </div>
                                   ))
@@ -1945,7 +2094,7 @@ const LeadDetail = () => {
                                       >
                                         {order.order_number ||
                                           `SO-${order.id.slice(0, 6)}`}{" "}
-                                        (₹{order.total_amount.toLocaleString()})
+                                        (₹{(order.total_amount ?? 0).toLocaleString()})
                                       </label>
                                     </div>
                                   ))
@@ -2192,16 +2341,19 @@ const LeadDetail = () => {
                         </p>
                       </div>
                     </div>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleAddInvolvement}>
-                        {editingInvolvement
-                          ? "Update Involvement"
-                          : "Add Involvement"}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => { setInvolvementDialogOpen(false); resetInvolvementForm(); }}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleAddInvolvement}
+                        disabled={createInvolvementMutation.isPending || updateInvolvementMutation.isPending}
+                      >
+                        {editingInvolvement ? "Update Involvement" : "Add Involvement"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </TabsContent>
 
               {/* Assign Tab */}
@@ -2246,7 +2398,7 @@ const LeadDetail = () => {
                               <p className="text-xs text-gray-500">
                                 Assigned by {assignment.assigned_by_name} on{" "}
                                 {format(
-                                  new Date(assignment.assigned_at),
+                                  new Date(assignment.assigned_at || assignment.created_at),
                                   "MMM dd, yyyy",
                                 )}
                               </p>
@@ -2268,17 +2420,14 @@ const LeadDetail = () => {
                 )}
 
                 {/* Assign User Dialog */}
-                <AlertDialog
+                <Dialog
                   open={assignDialogOpen}
                   onOpenChange={setAssignDialogOpen}
                 >
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Assign User to Lead</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Select a user to assign to this lead
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Assign User to Lead</DialogTitle>
+                    </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div>
                         <Label htmlFor="user-select">User *</Label>
@@ -2290,9 +2439,9 @@ const LeadDetail = () => {
                             <SelectValue placeholder="Select user" />
                           </SelectTrigger>
                           <SelectContent>
-                            {users?.map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.name} ({user.email})
+                            {users?.map((u) => (
+                              <SelectItem key={u.id} value={u.id}>
+                                {u.name} ({u.email})
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -2317,14 +2466,14 @@ const LeadDetail = () => {
                         />
                       </div>
                     </div>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleAssignUser}>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
+                      <Button onClick={handleAssignUser} disabled={assignMutation.isPending}>
                         Assign
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </TabsContent>
 
               {/* Remarks Tab */}
@@ -2355,16 +2504,16 @@ const LeadDetail = () => {
                                   {remark.title}
                                 </span>
                                 <Badge variant="secondary">
-                                  {remark.remark_type}
+                                  {remark.type}
                                 </Badge>
                               </div>
-                              {remark.description && (
+                              {remark.content && (
                                 <p className="text-sm text-gray-600">
-                                  {remark.description}
+                                  {remark.content}
                                 </p>
                               )}
                               <p className="text-xs text-gray-500">
-                                By {remark.created_by_name} on{" "}
+                                By {remark.author_name || remark.created_by_name} on{" "}
                                 {format(
                                   new Date(remark.created_at),
                                   "MMM dd, yyyy HH:mm",
@@ -2399,7 +2548,7 @@ const LeadDetail = () => {
                 )}
 
                 {/* Add Remark Dialog */}
-                <AlertDialog
+                <Dialog
                   open={remarkDialogOpen}
                   onOpenChange={(open) => {
                     setRemarkDialogOpen(open);
@@ -2411,17 +2560,12 @@ const LeadDetail = () => {
                     }
                   }}
                 >
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>
                         {editingRemark ? "Edit Remark" : "Add Remark"}
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {editingRemark
-                          ? "Update the milestone or note"
-                          : "Add a milestone or important note for this lead"}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
+                      </DialogTitle>
+                    </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div>
                         <Label htmlFor="remark-type">Type</Label>
@@ -2461,14 +2605,17 @@ const LeadDetail = () => {
                         />
                       </div>
                     </div>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleAddRemark}>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setRemarkDialogOpen(false)}>Cancel</Button>
+                      <Button
+                        onClick={handleAddRemark}
+                        disabled={remarkMutation.isPending || updateRemarkMutation.isPending}
+                      >
                         {editingRemark ? "Update Remark" : "Add Remark"}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </TabsContent>
 
               {/* Comments Tab */}
@@ -2495,7 +2642,7 @@ const LeadDetail = () => {
                           {/* Avatar Circle */}
                           <div className="relative z-10 flex-shrink-0">
                             <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">
-                              {comment.created_by_name.charAt(0).toUpperCase()}
+                              {(comment.author_name || comment.created_by_name)?.charAt(0)?.toUpperCase() ?? "?"}
                             </div>
                           </div>
 
@@ -2507,7 +2654,7 @@ const LeadDetail = () => {
                             <div className="flex justify-between items-start mb-2">
                               <div>
                                 <span className="font-semibold text-sm text-gray-900">
-                                  {comment.created_by_name}
+                                  {comment.author_name || comment.created_by_name}
                                 </span>
                                 <span className="text-xs text-gray-500 ml-2">
                                   {format(
@@ -2529,7 +2676,7 @@ const LeadDetail = () => {
                             </div>
 
                             <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                              {comment.comment}
+                              {comment.content || comment.comment}
                             </p>
                           </div>
                         </div>
@@ -2585,9 +2732,11 @@ const LeadDetail = () => {
                                 <span className="font-semibold">
                                   {doc.file_name}
                                 </span>
-                                <Badge variant="outline" className="text-xs">
-                                  {(doc.file_size / 1024).toFixed(1)} KB
-                                </Badge>
+                                {doc.file_size != null && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {(doc.file_size / 1024).toFixed(1)} KB
+                                  </Badge>
+                                )}
                               </div>
                               {doc.description && (
                                 <p className="text-sm text-gray-600">
@@ -2595,10 +2744,9 @@ const LeadDetail = () => {
                                 </p>
                               )}
                               <p className="text-xs text-gray-500">
-                                Uploaded by {doc.uploaded_by_name} on{" "}
-                                {format(
-                                  new Date(doc.uploaded_at),
-                                  "MMM dd, yyyy",
+                                Uploaded by {doc.uploaded_by_name}
+                                {(doc.uploaded_at || doc.created_at) && (
+                                  <> on {format(new Date(doc.uploaded_at || doc.created_at), "MMM dd, yyyy")}</>
                                 )}
                               </p>
                             </div>
@@ -2626,17 +2774,17 @@ const LeadDetail = () => {
                 )}
 
                 {/* Upload Document Dialog */}
-                <AlertDialog
+                <Dialog
                   open={docDialogOpen}
-                  onOpenChange={setDocDialogOpen}
+                  onOpenChange={(open) => {
+                    setDocDialogOpen(open);
+                    if (!open) { setDocFile(null); setDocDescription(""); }
+                  }}
                 >
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Upload Document</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Upload a document related to this lead
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Upload Document</DialogTitle>
+                    </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div>
                         <Label htmlFor="doc-file">File *</Label>
@@ -2657,14 +2805,14 @@ const LeadDetail = () => {
                         />
                       </div>
                     </div>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleUploadDocument}>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setDocDialogOpen(false)}>Cancel</Button>
+                      <Button onClick={handleUploadDocument} disabled={uploadDocMutation.isPending}>
                         Upload
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </TabsContent>
             </Tabs>
           </CardContent>

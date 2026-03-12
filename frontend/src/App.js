@@ -12,8 +12,8 @@ import NotFound from "./components/common/NotFound";
 import { Login } from "./modules/auth";
 import { Dashboard } from "./modules/dashboard";
 import { Leads, LeadForm, LeadDetail } from "./modules/leads";
-import { Enquiries, EnquiryForm, EnquiryDetail } from "./modules/enquiries";
-import { Entities, EntityForm } from "./modules/entities";
+import { Entities, EntityForm, EntityDetail } from "./modules/entities";
+import { Customers, CustomerForm } from "./modules/customers";
 import {
   Products,
   ProductForm,
@@ -163,65 +163,16 @@ function App() {
               }
             />
 
-            {/* Enquiries */}
-            <Route
-              path="/enquiries"
-              element={
-                <P>
-                  <Enquiries />
-                </P>
-              }
-            />
-            <Route
-              path="/enquiries/new"
-              element={
-                <P>
-                  <EnquiryForm />
-                </P>
-              }
-            />
-            <Route
-              path="/enquiries/edit/:id"
-              element={
-                <P>
-                  <EnquiryForm />
-                </P>
-              }
-            />
-            <Route
-              path="/enquiries/:id"
-              element={
-                <P>
-                  <EnquiryDetail />
-                </P>
-              }
-            />
-
             {/* Entities */}
-            <Route
-              path="/entities"
-              element={
-                <P>
-                  <Entities />
-                </P>
-              }
-            />
-            <Route
-              path="/entities/new"
-              element={
-                <P>
-                  <EntityForm />
-                </P>
-              }
-            />
-            <Route
-              path="/entities/edit/:id"
-              element={
-                <P>
-                  <EntityForm />
-                </P>
-              }
-            />
+            <Route path="/entities" element={<P><Entities /></P>} />
+            <Route path="/entities/new" element={<P><EntityForm /></P>} />
+            <Route path="/entities/edit/:id" element={<P><EntityForm /></P>} />
+            <Route path="/entities/:id" element={<P><EntityDetail /></P>} />
+
+            {/* Customers */}
+            <Route path="/customers" element={<P><Customers /></P>} />
+            <Route path="/customers/new" element={<P><CustomerForm /></P>} />
+            <Route path="/customers/edit/:id" element={<P><CustomerForm /></P>} />
 
             {/* Products */}
             <Route

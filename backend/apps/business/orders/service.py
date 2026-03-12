@@ -13,19 +13,24 @@ from decimal import Decimal
 from datetime import datetime, timezone
 
 from core.base_service import BaseCRUDService, serialize_document
+from core.database import get_database
 
 
-def _calculate_totals(items: List[Dict]) -> tuple:
-    """Calculate subtotal, tax, discount, and total from line items."""
-    subtotal = Decimal("0")
+def _calculate_totals(items: List[Dict], tax_percentage: float = 0) -> tuple:
+    """Calculate subtotal, tax, discount, and total from line items.
+    Uses selling price (price) when set, falls back to unit_price."""
+    subtotal = 0.0
     processed = []
     for item in items:
-        qty = item.get("quantity", 0)
-        price = Decimal(str(item.get("unit_price", 0)))
-        item_total = qty * price
-        processed.append({**item, "total_price": float(item_total)})
+        qty = item.get("quantity", 0) or 0
+        # Use selling price if set and non-zero, otherwise fall back to unit_price
+        selling_price = float(item.get("price") or item.get("unit_price") or 0)
+        item_total = qty * selling_price
+        processed.append({**item, "total_price": item_total})
         subtotal += item_total
-    return processed, float(subtotal), 0.0, 0.0, float(subtotal)
+    tax_amount = round(subtotal * tax_percentage / 100, 2)
+    total = round(subtotal + tax_amount, 2)
+    return processed, round(subtotal, 2), tax_amount, 0.0, total
 
 
 # ─────────────────── BOQ Service ───────────────────
@@ -37,28 +42,81 @@ class BOQService(BaseCRUDService):
     async def create_boq(self, data: Dict[str, Any], user_id: str) -> Dict[str, Any]:
         """Create BOQ with auto-calculated totals."""
         items = data.get("items", [])
+        tax_pct = float(data.get("tax_percentage", 0) or 0)
         if items:
-            processed, subtotal, tax, discount, total = _calculate_totals(items)
+            processed, subtotal, tax, discount, total = _calculate_totals(items, tax_pct)
             data["items"] = processed
             data["subtotal"] = subtotal
             data["tax_amount"] = tax
             data["discount_amount"] = discount
             data["total_amount"] = total
+
+        # Auto-generate name if not provided
+        if not data.get("name"):
+            data["name"] = f"BOQ-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
 
         data["status"] = data.get("status", "draft")
         data["version"] = data.get("version", 1)
-        return await self.create(data, user_id=user_id)
+        boq = await self.create(data, user_id=user_id)
+
+        # Update LeadInvolvement.assigned_boqs if involvement_id is set
+        involvement_id = data.get("involvement_id")
+        if involvement_id and boq.get("id"):
+            db = get_database()
+            await db.lead_involvements.update_one(
+                {"id": involvement_id},
+                {"$addToSet": {"assigned_boqs": boq["id"]}},
+            )
+
+        return boq
 
     async def update_boq(self, boq_id: str, data: Dict[str, Any], user_id: str) -> Optional[Dict[str, Any]]:
-        """Update BOQ; recalculate totals if items change."""
-        if "items" in data and data["items"]:
-            processed, subtotal, tax, discount, total = _calculate_totals(data["items"])
+        """Update BOQ; snapshot current version, recalculate totals if items or tax change."""
+        # Fetch current state for version snapshot
+        current = await self.get_by_id(boq_id)
+        if not current:
+            return None
+
+        items = data.get("items")
+        if items is not None:
+            tax_pct = float(data.get("tax_percentage", 0) or 0)
+            if not tax_pct:
+                tax_pct = float(current.get("tax_percentage", 0))
+            processed, subtotal, tax, discount, total = _calculate_totals(items, tax_pct)
             data["items"] = processed
             data["subtotal"] = subtotal
             data["tax_amount"] = tax
             data["discount_amount"] = discount
             data["total_amount"] = total
+        elif "tax_percentage" in data:
+            tax_pct = float(data["tax_percentage"] or 0)
+            _, subtotal, tax, discount, total = _calculate_totals(current.get("items", []), tax_pct)
+            data["subtotal"] = subtotal
+            data["tax_amount"] = tax
+            data["discount_amount"] = discount
+            data["total_amount"] = total
+
+        # Snapshot current state into boq_versions before applying update
+        db = get_database()
+        snapshot = {k: v for k, v in current.items() if k != "_id"}
+        snapshot["boq_id"] = boq_id
+        snapshot["snapshot_at"] = datetime.now(timezone.utc).isoformat()
+        snapshot["updated_by_on_save"] = user_id
+        await db.boq_versions.insert_one(snapshot)
+
+        # Increment version number
+        data["version"] = int(current.get("version", 1)) + 1
+
         return await self.update(boq_id, data, user_id=user_id)
+
+    async def get_version_history(self, boq_id: str) -> List[Dict[str, Any]]:
+        """Return version history for a BOQ from the boq_versions collection."""
+        db = get_database()
+        cursor = db.boq_versions.find(
+            {"boq_id": boq_id}, {"_id": 0}
+        ).sort("version", -1)
+        versions = await cursor.to_list(length=100)
+        return versions
 
     async def list_boqs(
         self,

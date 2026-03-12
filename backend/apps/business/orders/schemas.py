@@ -1,42 +1,72 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from decimal import Decimal
 
 # BOQ Schemas
 class BOQItemCreate(BaseModel):
-    product_id: str
-    product_name: str
-    quantity: int = Field(..., gt=0)
-    unit_price: Decimal = Field(..., gt=0)
-    specifications: Optional[str] = None
+    model_config = ConfigDict(extra="ignore")
+    product_id: str = ""
+    product_code: str = ""
+    item_name: str = ""        # display name used by frontend
+    product_name: str = ""     # backward-compat alias
+    description: str = ""
+    specifications: Any = None  # list[str] or str
+    quantity: int = Field(1, gt=0)
+    unit: str = ""
+    unit_price: float = 0
+    price: float = 0            # selling price (used for totals)
+    percentage: float = 0       # markup %
+    total_price: float = 0
 
 class BOQItemResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     product_id: str = ""
+    product_code: str = ""
+    item_name: str = ""
     product_name: str = ""
+    description: str = ""
+    specifications: Any = None
     quantity: int = 0
-    unit_price: Decimal = Decimal("0")
-    total_price: Decimal = Decimal("0")
-    specifications: Optional[str] = None
+    unit: str = ""
+    unit_price: float = 0
+    price: float = 0
+    percentage: float = 0
+    total_price: float = 0
 
 class BOQCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=200)
+    model_config = ConfigDict(extra="ignore")
+    name: str = ""
     description: Optional[str] = None
     lead_id: Optional[str] = None
     entity_id: Optional[str] = None
+    involvement_id: Optional[str] = None
+    channel: str = "direct"
+    from_data: Dict[str, Any] = Field(default_factory=dict)
+    to_data: Dict[str, Any] = Field(default_factory=dict)
     project_name: Optional[str] = None
+    boq_number: Optional[str] = None
     items: List[BOQItemCreate] = Field(default_factory=list)
-    currency: str = "USD"
+    tax_percentage: float = 0
+    currency: str = "INR"
     valid_until: Optional[datetime] = None
     notes: Optional[str] = None
     terms_conditions: Optional[str] = None
 
 class BOQUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    model_config = ConfigDict(extra="ignore")
+    name: Optional[str] = None
     description: Optional[str] = None
+    lead_id: Optional[str] = None
     entity_id: Optional[str] = None
+    involvement_id: Optional[str] = None
+    channel: Optional[str] = None
+    from_data: Optional[Dict[str, Any]] = None
+    to_data: Optional[Dict[str, Any]] = None
     project_name: Optional[str] = None
+    boq_number: Optional[str] = None
     items: Optional[List[BOQItemCreate]] = None
+    tax_percentage: Optional[float] = None
     currency: Optional[str] = None
     valid_until: Optional[datetime] = None
     status: Optional[str] = None
@@ -44,19 +74,26 @@ class BOQUpdate(BaseModel):
     terms_conditions: Optional[str] = None
 
 class BOQResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     id: str = ""
     name: str = ""
     description: Optional[str] = None
     lead_id: Optional[str] = None
     entity_id: Optional[str] = None
+    involvement_id: Optional[str] = None
+    channel: str = "direct"
+    from_data: Dict[str, Any] = Field(default_factory=dict)
+    to_data: Dict[str, Any] = Field(default_factory=dict)
     project_name: Optional[str] = None
+    boq_number: Optional[str] = None
     version: int = 1
     items: List[BOQItemResponse] = Field(default_factory=list)
-    subtotal: Decimal = Decimal("0")
-    tax_amount: Decimal = Decimal("0")
-    discount_amount: Decimal = Decimal("0")
-    total_amount: Decimal = Decimal("0")
-    currency: str = "USD"
+    subtotal: float = 0
+    tax_percentage: float = 0
+    tax_amount: float = 0
+    discount_amount: float = 0
+    total_amount: float = 0
+    currency: str = "INR"
     valid_until: Optional[datetime] = None
     status: str = "draft"
     notes: Optional[str] = None

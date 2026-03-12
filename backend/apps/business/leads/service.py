@@ -19,33 +19,52 @@ class LeadService(BaseCRUDService):
         page: int = 1,
         page_size: int = 20,
         status: str = None,
-        channel: str = None,
         priority: str = None,
         assigned_to: str = None,
         search: str = None,
         sort_by: str = "created_at",
         sort_order: int = -1,
+        current_user_id: str = None,
+        is_superuser: bool = True,
     ) -> Dict[str, Any]:
-        """List leads with filters and server-side pagination."""
+        """List leads with filters and server-side pagination.
+
+        Non-superusers only see leads they created or are assigned to.
+        """
         query: Dict[str, Any] = {}
+
+        # Access restriction: non-superusers see only their leads
+        if not is_superuser and current_user_id:
+            db = get_database()
+            assigned_lead_ids = [
+                doc["lead_id"]
+                async for doc in db.assignments.find(
+                    {"user_id": current_user_id, "is_deleted": {"$ne": True}},
+                    {"_id": 0, "lead_id": 1},
+                )
+            ]
+            query["$or"] = [
+                {"created_by": current_user_id},
+                {"id": {"$in": assigned_lead_ids}},
+            ]
 
         if status:
             query["status"] = status
-        if channel:
-            query["channel"] = channel
         if priority:
             query["priority"] = priority
         if assigned_to:
             query["assigned_to"] = assigned_to
         if search:
-            query["$or"] = [
-                {"contact_name": {"$regex": search, "$options": "i"}},
-                {"company": {"$regex": search, "$options": "i"}},
+            search_filter = [
                 {"project_name": {"$regex": search, "$options": "i"}},
-                {"contact_email": {"$regex": search, "$options": "i"}},
-                {"contact_phone": {"$regex": search, "$options": "i"}},
                 {"source": {"$regex": search, "$options": "i"}},
+                {"notes": {"$regex": search, "$options": "i"}},
             ]
+            # Merge search $or with access $or if both present
+            if "$or" in query:
+                query["$and"] = [{"$or": query.pop("$or")}, {"$or": search_filter}]
+            else:
+                query["$or"] = search_filter
 
         return await self.list(
             query=query,
@@ -61,11 +80,16 @@ class LeadService(BaseCRUDService):
         base = {"is_deleted": {"$ne": True}}
 
         total = await col.count_documents(base)
-        new_count = await col.count_documents({**base, "status": "new"})
-        qualified = await col.count_documents({**base, "status": "qualified"})
-        contacted = await col.count_documents({**base, "status": "contacted"})
-        converted = await col.count_documents({**base, "status": "converted"})
-        lost = await col.count_documents({**base, "status": "lost"})
+
+        all_statuses = [
+            "new_lead", "under_review", "solution_design", "proposal_submitted",
+            "under_negotiation", "poc_evaluation", "price_finalization", "pi_issued",
+            "order_won", "order_processing", "project_execution", "project_completed",
+            "lost",
+        ]
+        by_status = {}
+        for s in all_statuses:
+            by_status[s] = await col.count_documents({**base, "status": s})
 
         # Pipeline value
         pipeline = [
@@ -74,18 +98,6 @@ class LeadService(BaseCRUDService):
         ]
         value_result = await col.aggregate(pipeline).to_list(1)
         total_value = value_result[0]["total_value"] if value_result else 0
-
-        # By channel
-        channel_pipeline = [
-            {"$match": base},
-            {"$group": {"_id": "$channel", "count": {"$sum": 1}}},
-            {"$sort": {"count": -1}},
-        ]
-        by_channel = {
-            doc["_id"]: doc["count"]
-            for doc in await col.aggregate(channel_pipeline).to_list(20)
-            if doc["_id"]
-        }
 
         # By priority
         priority_pipeline = [
@@ -98,19 +110,15 @@ class LeadService(BaseCRUDService):
             if doc["_id"]
         }
 
+        won = by_status.get("order_won", 0) + by_status.get("order_processing", 0) + \
+              by_status.get("project_execution", 0) + by_status.get("project_completed", 0)
+
         return {
             "total": total,
-            "by_status": {
-                "new": new_count,
-                "qualified": qualified,
-                "contacted": contacted,
-                "converted": converted,
-                "lost": lost,
-            },
-            "by_channel": by_channel,
+            "by_status": by_status,
             "by_priority": by_priority,
             "pipeline_value": float(total_value),
-            "conversion_rate": round((converted / total * 100), 1) if total > 0 else 0,
+            "conversion_rate": round((won / total * 100), 1) if total > 0 else 0,
         }
 
 

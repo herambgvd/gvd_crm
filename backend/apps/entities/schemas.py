@@ -82,3 +82,38 @@ class BulkUploadResponse(BaseModel):
     message: str
     success_count: int
     errors: list = Field(default_factory=list)
+
+
+# ─── Team Members ─────────────────────────────────
+
+class TeamMemberCreate(BaseModel):
+    entity_id: str
+    name: str = Field(..., min_length=1, max_length=200)
+    designation: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    is_primary_contact: bool = False
+    notes: Optional[str] = None
+
+
+class TeamMemberUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    designation: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    is_primary_contact: Optional[bool] = None
+    notes: Optional[str] = None
+
+
+class TeamMemberResponse(BaseModel):
+    id: str
+    entity_id: str
+    name: str = ""
+    designation: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    is_primary_contact: bool = False
+    notes: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
