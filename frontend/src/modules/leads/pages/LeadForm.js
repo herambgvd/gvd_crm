@@ -380,6 +380,11 @@ const LeadForm = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    if (!isEdit && !formData.sop_id) {
+      toast.error("Please select a workflow (SOP) for this lead");
+      return;
+    }
+
     const submitData = { ...formData };
 
     if (submitData.expected_value !== "" && submitData.expected_value !== null) {

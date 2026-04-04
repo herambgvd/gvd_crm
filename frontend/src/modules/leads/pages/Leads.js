@@ -73,11 +73,13 @@ const Leads = () => {
     setStateFilter(null);
   }, []);
 
-  // Build query params
+  // Build query params — only filter by sop when a specific state is clicked
   const queryParams = React.useMemo(() => {
     const params = { page: currentPage, page_size: pageSize };
-    if (selectedSopId) params.sop_id = selectedSopId;
-    if (stateFilter) params.current_state_id = stateFilter;
+    if (stateFilter && selectedSopId) {
+      params.sop_id = selectedSopId;
+      params.current_state_id = stateFilter;
+    }
     if (debouncedSearch) params.search = debouncedSearch;
     return params;
   }, [currentPage, pageSize, selectedSopId, stateFilter, debouncedSearch]);

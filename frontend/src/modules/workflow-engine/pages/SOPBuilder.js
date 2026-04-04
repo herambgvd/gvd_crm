@@ -138,20 +138,23 @@ const SOPBuilder = () => {
   const [transitionDialog, setTransitionDialog] = useState(null);
 
   // Load existing SOP
-  const { isLoading: loadingSOP } = useQuery({
+  const { data: sopData, isLoading: loadingSOP } = useQuery({
     queryKey: ["sop", id],
     queryFn: () => fetchSOP(id),
     enabled: isEdit,
-    onSuccess: (data) => {
-      setName(data.name);
-      setDescription(data.description || "");
-      setModule(data.module);
-      setStates(
-        (data.states || []).sort((a, b) => a.position - b.position)
-      );
-      setTransitions(data.transitions || []);
-    },
   });
+
+  React.useEffect(() => {
+    if (sopData) {
+      setName(sopData.name);
+      setDescription(sopData.description || "");
+      setModule(sopData.module);
+      setStates(
+        (sopData.states || []).sort((a, b) => a.position - b.position)
+      );
+      setTransitions(sopData.transitions || []);
+    }
+  }, [sopData]);
 
   // DnD sensors
   const sensors = useSensors(

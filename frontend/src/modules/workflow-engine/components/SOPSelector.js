@@ -10,43 +10,54 @@ import {
 } from "../../../components/ui/select";
 import { fetchSOPsByModule } from "../api";
 
-/**
- * SOP selector dropdown for record creation forms.
- *
- * Props:
- *   module: "sales" | "support" | "inventory"
- *   value: selected SOP ID
- *   onChange: (sopId) => void
- *   label: optional label text
- */
 const SOPSelector = ({ module, value, onChange, label = "Select SOP *" }) => {
   const { data: sops = [], isLoading } = useQuery({
-    queryKey: ["sops", module],
+    queryKey: ["sops-module", module],
     queryFn: () => fetchSOPsByModule(module),
   });
 
   return (
     <div>
-      <Label>{label}</Label>
-      <Select value={value || ""} onValueChange={onChange} disabled={isLoading}>
-        <SelectTrigger>
-          <SelectValue
-            placeholder={isLoading ? "Loading SOPs..." : "Choose workflow"}
-          />
-        </SelectTrigger>
-        <SelectContent>
-          {sops.map((sop) => (
-            <SelectItem key={sop.id} value={sop.id}>
-              {sop.name}
-              {sop.description && (
-                <span className="text-muted-foreground ml-2 text-xs">
-                  — {sop.description}
-                </span>
-              )}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Label className="text-xs">{label}</Label>
+      {value ? (
+        <Select value={value} onValueChange={onChange} disabled={isLoading}>
+          <SelectTrigger className="h-8 text-sm">
+            <SelectValue placeholder="Choose workflow" />
+          </SelectTrigger>
+          <SelectContent>
+            {sops.map((sop) => (
+              <SelectItem key={sop.id} value={sop.id}>
+                {sop.name}
+                {sop.description && (
+                  <span className="text-muted-foreground ml-2 text-xs">
+                    — {sop.description}
+                  </span>
+                )}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : (
+        <Select onValueChange={onChange} disabled={isLoading}>
+          <SelectTrigger className="h-8 text-sm">
+            <SelectValue
+              placeholder={isLoading ? "Loading..." : "Choose workflow"}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {sops.map((sop) => (
+              <SelectItem key={sop.id} value={sop.id}>
+                {sop.name}
+                {sop.description && (
+                  <span className="text-muted-foreground ml-2 text-xs">
+                    — {sop.description}
+                  </span>
+                )}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
     </div>
   );
 };

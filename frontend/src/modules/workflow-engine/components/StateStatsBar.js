@@ -18,7 +18,7 @@ const StateStatsBar = ({
   activeStateFilter,
 }) => {
   const { data: sops = [] } = useQuery({
-    queryKey: ["sops", module],
+    queryKey: ["sops-module", module],
     queryFn: () => fetchSOPsByModule(module),
   });
 
@@ -28,8 +28,9 @@ const StateStatsBar = ({
     enabled: !!selectedSopId,
   });
 
+  // Auto-select first SOP when loaded
   React.useEffect(() => {
-    if (!selectedSopId && sops.length > 0) {
+    if (sops.length > 0 && !selectedSopId) {
       onSopChange(sops[0].id);
     }
   }, [sops, selectedSopId, onSopChange]);
@@ -37,29 +38,43 @@ const StateStatsBar = ({
   const statesList = stats?.states || [];
   const total = stats?.total || 0;
 
+  if (sops.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        No workflows configured for this module.{" "}
+        <a href="/settings/workflows/new" className="text-primary underline">
+          Create one
+        </a>
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {/* SOP Selector */}
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-muted-foreground">SOP:</span>
-        <Select value={selectedSopId || ""} onValueChange={onSopChange}>
-          <SelectTrigger className="w-56 h-8 text-xs">
-            <SelectValue placeholder="Select SOP" />
-          </SelectTrigger>
-          <SelectContent>
-            {sops.map((sop) => (
-              <SelectItem key={sop.id} value={sop.id}>
-                {sop.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {selectedSopId ? (
+          <Select value={selectedSopId} onValueChange={onSopChange}>
+            <SelectTrigger className="w-56 h-8 text-xs">
+              <SelectValue placeholder="Select SOP" />
+            </SelectTrigger>
+            <SelectContent>
+              {sops.map((sop) => (
+                <SelectItem key={sop.id} value={sop.id}>
+                  {sop.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="text-xs text-muted-foreground">Loading...</span>
+        )}
       </div>
 
       {/* Stats Cards */}
       {selectedSopId && (
         <div className="flex flex-wrap gap-2">
-          {/* Total card */}
           <Card
             className={`cursor-pointer transition-all ${
               !activeStateFilter
