@@ -26,6 +26,8 @@ class LeadService(BaseCRUDService):
         sort_order: int = -1,
         current_user_id: str = None,
         is_superuser: bool = True,
+        sop_id: str = None,
+        current_state_id: str = None,
     ) -> Dict[str, Any]:
         """List leads with filters and server-side pagination.
 
@@ -54,6 +56,10 @@ class LeadService(BaseCRUDService):
             query["priority"] = priority
         if assigned_to:
             query["assigned_to"] = assigned_to
+        if sop_id:
+            query["sop_id"] = sop_id
+        if current_state_id:
+            query["current_state_id"] = current_state_id
         if search:
             search_filter = [
                 {"project_name": {"$regex": search, "$options": "i"}},

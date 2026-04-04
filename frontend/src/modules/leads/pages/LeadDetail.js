@@ -4,6 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../../context/AuthContext";
 import { Layout } from "../../../components";
 import {
+  StateBadge,
+  TransitionActions,
+  TransitionTimeline,
+} from "../../workflow-engine";
+import {
   fetchLead,
   updateLead,
   fetchLeadAssignments,
@@ -185,8 +190,8 @@ const LeadDetail = () => {
   });
 
   const { data: allOrders } = useQuery({
-    queryKey: ["salesOrders"],
-    queryFn: fetchSalesOrders,
+    queryKey: ["salesOrders", id],
+    queryFn: () => fetchSalesOrders({ lead_id: id, page_size: 100 }),
     enabled: !!id,
   });
 
@@ -400,41 +405,7 @@ const LeadDetail = () => {
     },
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: (status) => updateLead(id, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries(["lead", id]);
-      queryClient.invalidateQueries(["leads"]);
-      queryClient.invalidateQueries(["lead-stats"]);
-      toast.success("Status updated!");
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.detail || "Failed to update status");
-    },
-  });
-
-  const WORKFLOW_NEXT = {
-    new_lead: "under_review",
-    under_review: "solution_design",
-    solution_design: "proposal_submitted",
-    proposal_submitted: "under_negotiation",
-    under_negotiation: "poc_evaluation",
-    poc_evaluation: "price_finalization",
-    price_finalization: "pi_issued",
-    pi_issued: "order_won",
-    order_won: "order_processing",
-    order_processing: "project_execution",
-    project_execution: "project_completed",
-  };
-
-  const STATUS_LABELS = {
-    new_lead: "New Lead", under_review: "Under Review", solution_design: "Solution Design",
-    proposal_submitted: "Proposal Submitted", under_negotiation: "Under Negotiation",
-    poc_evaluation: "POC / Tech Eval", price_finalization: "Price Finalization",
-    pi_issued: "PI Issued", order_won: "Order Won", order_processing: "Order Processing",
-    project_execution: "Project Execution", project_completed: "Project Completed",
-    lost: "Lost",
-  };
+  // Status transitions are now handled by the Workflow Engine
 
   const deleteBOQMutation = useMutation({
     mutationFn: deleteBOQ,
@@ -752,7 +723,7 @@ const LeadDetail = () => {
         const inv = involvements?.find((i) => i.id === boqBidderFilter || i.entity_id === boqBidderFilter);
         return inv ? inv.assigned_boqs?.includes(b.id) : false;
       });
-  const salesOrders = allOrders?.items?.filter((o) => o.lead_id === id) || [];
+  const salesOrders = allOrders?.items || [];
 
   // Filter Purchase Orders based on PI (Sales Order) relationship
   const salesOrderIds = salesOrders.map((so) => so.id);
@@ -875,31 +846,21 @@ const LeadDetail = () => {
                   </p>
                 )}
                 <div className="flex items-center gap-2 mt-3 flex-wrap">
-                  {getStatusBadge(lead.status, "lead")}
+                  <StateBadge
+                    stateName={lead.current_state_name}
+                    stateColor={null}
+                  />
                   <Badge variant="outline" className="capitalize">{lead.priority}</Badge>
                 </div>
               </div>
-              {/* Workflow progression */}
-              {lead.status !== "project_completed" && lead.status !== "lost" && (
-                <div className="flex gap-2 ml-4">
-                  {WORKFLOW_NEXT[lead.status] && (
-                    <Button
-                      size="sm"
-                      onClick={() => updateStatusMutation.mutate(WORKFLOW_NEXT[lead.status])}
-                      disabled={updateStatusMutation.isPending}
-                    >
-                      → {STATUS_LABELS[WORKFLOW_NEXT[lead.status]]}
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-600 border-red-200 hover:bg-red-50"
-                    onClick={() => updateStatusMutation.mutate("lost")}
-                    disabled={updateStatusMutation.isPending}
-                  >
-                    Mark Lost
-                  </Button>
+              {/* Workflow Transition Actions */}
+              {lead.sop_id && (
+                <div className="ml-4">
+                  <TransitionActions
+                    recordType="lead"
+                    recordId={lead.id}
+                    invalidateKeys={[["lead", id], ["leads"]]}
+                  />
                 </div>
               )}
             </div>
@@ -997,7 +958,10 @@ const LeadDetail = () => {
         <Card className="border border-gray-200">
           <CardContent className="pt-6">
             <Tabs defaultValue="boqs" className="w-full" onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-10 h-auto p-1">
+              <TabsList className="grid w-full grid-cols-11 h-auto p-1">
+                <TabsTrigger value="timeline" className="text-xs py-2">
+                  Timeline
+                </TabsTrigger>
                 <TabsTrigger value="boqs" className="text-xs py-2">
                   BOQs ({boqs.length})
                 </TabsTrigger>
@@ -1029,6 +993,12 @@ const LeadDetail = () => {
                   Comments ({comments?.length || 0})
                 </TabsTrigger>
               </TabsList>
+
+              {/* Workflow Timeline Tab */}
+              <TabsContent value="timeline" className="space-y-4 mt-4">
+                <h3 className="font-semibold text-lg">Workflow History</h3>
+                <TransitionTimeline recordType="lead" recordId={id} />
+              </TabsContent>
 
               {/* BOQs Tab */}
               <TabsContent value="boqs" className="space-y-4 mt-4">
@@ -1103,6 +1073,13 @@ const LeadDetail = () => {
                               </div>
                             </div>
                           </div>
+
+                          {/* Entity (To) */}
+                          {boq.to_data?.company_name && (
+                            <p className="text-xs text-blue-700 font-medium mb-1 truncate">
+                              To: {boq.to_data.company_name}
+                            </p>
+                          )}
 
                           {/* Project Info */}
                           {boq.project_name && (
@@ -1248,7 +1225,7 @@ const LeadDetail = () => {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {salesOrders.map((order) => (
                       <Card
                         key={order.id}
@@ -1259,18 +1236,20 @@ const LeadDetail = () => {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="font-semibold font-mono text-blue-600">
-                                  {order.order_number}
+                                  {order.pi_number || order.order_number}
                                 </span>
                                 {getStatusBadge(order.status, "order")}
                               </div>
                               <p className="text-sm text-gray-600 mb-1">
-                                Customer: {order.customer_name}
+                                For: {order.to_data?.company_name || order.to_data?.name || "—"}
                               </p>
                               {order.boq_id && (
                                 <p className="text-xs text-gray-500 mb-1">
                                   BOQ:{" "}
-                                  {boqs.find((b) => b.id === order.boq_id)
-                                    ?.boq_number || "Unknown"}
+                                  {(() => {
+                                    const b = boqs.find((b) => b.id === order.boq_id);
+                                    return b ? (b.boq_number || b.name || order.boq_id.slice(-8)) : order.boq_id.slice(-8);
+                                  })()}
                                 </p>
                               )}
                               <p className="font-mono font-semibold text-lg text-green-600">

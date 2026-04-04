@@ -60,6 +60,8 @@ async def get_leads(
     search: Optional[str] = None,
     sort_by: str = Query("created_at", description="Field to sort by"),
     sort_order: int = Query(-1, ge=-1, le=1, description="-1 desc, 1 asc"),
+    sop_id: Optional[str] = None,
+    current_state_id: Optional[str] = None,
 ):
     """List leads with server-side pagination and filtering."""
     result = await lead_service.list_leads(
@@ -73,6 +75,8 @@ async def get_leads(
         sort_order=sort_order,
         current_user_id=current_user.id,
         is_superuser=current_user.is_superuser,
+        sop_id=sop_id,
+        current_state_id=current_state_id,
     )
     result["items"] = await _enrich_with_customer(result["items"])
     result["items"] = [_lead_response(doc) for doc in result["items"]]

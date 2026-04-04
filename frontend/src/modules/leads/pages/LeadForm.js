@@ -5,6 +5,8 @@ import { Layout } from "../../../components";
 import { createLead, updateLead, fetchLead, deleteLead, createLeadInvolvement } from "../api";
 import { searchCustomers, createCustomer } from "../../customers/api";
 import { searchEntities } from "../../entities/api";
+import { SOPSelector } from "../../workflow-engine";
+import { assignSOP } from "../../workflow-engine/api";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
@@ -203,6 +205,7 @@ const LeadForm = () => {
     expected_value: "",
     expected_close_date: "",
     notes: "",
+    sop_id: "",
   });
 
   const [additionalInfo, setAdditionalInfo] = useState([{ key: "", value: "" }]);
@@ -305,7 +308,16 @@ const LeadForm = () => {
   // ── Mutations ──────────────────────────────────────────────────────────────
   const createMutation = useMutation({
     mutationFn: async (data) => {
+      const sopId = data.sop_id;
+      delete data.sop_id;
+
       const lead = await createLead(data);
+
+      // Assign SOP to set initial state
+      if (sopId) {
+        await assignSOP("lead", lead.id, { sop_id: sopId });
+      }
+
       // Auto-create involvement records for consultant and bidders
       const involvementPromises = [];
       if (data.is_consultant_involved && data.consultant_entity_id) {
@@ -335,7 +347,7 @@ const LeadForm = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["leads"]);
-      queryClient.invalidateQueries(["lead-stats"]);
+      queryClient.invalidateQueries(["workflow-stats"]);
       toast.success("Lead created successfully!");
       navigate("/leads");
     },
@@ -433,6 +445,18 @@ const LeadForm = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+
+              {/* SOP Selection (only for new leads) */}
+              {!isEdit && (
+                <div className="grid grid-cols-2 gap-4">
+                  <SOPSelector
+                    module="sales"
+                    value={formData.sop_id}
+                    onChange={(val) => set("sop_id")(val)}
+                    label="Select Workflow (SOP) *"
+                  />
+                </div>
+              )}
 
               {/* Source + Project Name */}
               <div className="grid grid-cols-2 gap-4">
