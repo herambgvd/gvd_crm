@@ -77,7 +77,7 @@ const Users = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-lg font-semibold tracking-tight">
               User Management
             </h1>
             <p className="text-gray-600">

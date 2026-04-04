@@ -122,7 +122,7 @@ const PurchaseOrders = () => {
     <Layout>
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Purchase Orders</h1>
+          <h1 className="text-lg font-semibold text-gray-900">Purchase Orders</h1>
           <Button onClick={() => navigate("/purchase-orders/new")}>
             <Plus className="h-4 w-4 mr-2" />
             Create PO

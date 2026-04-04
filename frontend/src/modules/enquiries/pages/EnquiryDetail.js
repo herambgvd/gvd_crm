@@ -311,7 +311,7 @@ const EnquiryDetail = () => {
                   {priority.label}
                 </Badge>
               </div>
-              <h1 className="text-3xl font-bold font-heading tracking-tight">
+              <h1 className="text-lg font-semibold tracking-tight">
                 {enquiry.project_name}
               </h1>
             </div>

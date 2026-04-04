@@ -167,7 +167,7 @@ const RMARecords = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">RMA Records</h1>
+            <h1 className="text-lg font-semibold">RMA Records</h1>
             <p className="text-muted-foreground">
               Manage returns, repairs, and defective inventory
             </p>

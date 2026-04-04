@@ -105,11 +105,11 @@ const BOQTemplatePreview = ({ boqData, template }) => {
               </div>
             ) : (
               <div className="text-center p-6 bg-gray-50 mb-6 flex-shrink-0">
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="text-lg font-semibold text-gray-900">
                   {template.company_name || "Your Company Name"}
                 </h1>
                 {template.company_address && (
-                  <p className="text-sm text-gray-600 mt-2">
+                  <p className="text-sm text-sm text-muted-foreground">
                     {template.company_address}
                   </p>
                 )}

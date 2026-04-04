@@ -383,7 +383,7 @@ const Products = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Product Master</h1>
+            <h1 className="text-lg font-semibold">Product Master</h1>
             <p className="text-muted-foreground">
               Manage your product catalog & inventory ({total} total)
             </p>
@@ -410,7 +410,7 @@ const Products = () => {
                   Sales Stock
                 </span>
               </div>
-              <p className="text-2xl font-bold">
+              <p className="text-lg font-semibold">
                 {isLoadingSummary
                   ? "..."
                   : (stockSummary?.total_sales_quantity ?? 0)}
@@ -425,7 +425,7 @@ const Products = () => {
                   Demo Stock
                 </span>
               </div>
-              <p className="text-2xl font-bold">
+              <p className="text-lg font-semibold">
                 {isLoadingSummary
                   ? "..."
                   : (stockSummary?.total_demo_quantity ?? 0)}
@@ -438,7 +438,7 @@ const Products = () => {
                 <div className="w-3 h-3 rounded-full bg-red-500" />
                 <span className="text-sm text-muted-foreground">RMA Stock</span>
               </div>
-              <p className="text-2xl font-bold">
+              <p className="text-lg font-semibold">
                 {isLoadingSummary
                   ? "..."
                   : (stockSummary?.total_rma_quantity ?? 0)}
@@ -451,7 +451,7 @@ const Products = () => {
                 <AlertTriangle className="w-4 h-4 text-amber-500" />
                 <span className="text-sm text-muted-foreground">Low Stock</span>
               </div>
-              <p className="text-2xl font-bold text-amber-600">
+              <p className="text-lg font-semibold text-amber-600">
                 {isLoadingSummary
                   ? "..."
                   : (stockSummary?.low_stock_count ?? 0)}
@@ -466,7 +466,7 @@ const Products = () => {
                   Total Value
                 </span>
               </div>
-              <p className="text-2xl font-bold">
+              <p className="text-lg font-semibold">
                 {isLoadingSummary
                   ? "..."
                   : `₹${Number(stockSummary?.total_stock_value ?? 0).toLocaleString("en-IN")}`}

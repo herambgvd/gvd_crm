@@ -240,7 +240,7 @@ const PurchaseOrderForm = () => {
           </Button>
 
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
+            <h1 className="text-lg font-semibold text-gray-900">
               {isViewMode
                 ? "View Purchase Order"
                 : isEdit

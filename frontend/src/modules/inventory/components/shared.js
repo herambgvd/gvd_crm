@@ -167,7 +167,7 @@ export const StatCard = memo(
             </div>
           )}
         </div>
-        <div className="text-2xl font-bold">
+        <div className="text-lg font-semibold">
           {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : value}
         </div>
         {description && (

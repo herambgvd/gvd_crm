@@ -249,10 +249,10 @@ const Inventory = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold font-heading tracking-tight">
+            <h1 className="text-xl font-semibold tracking-tight">
               Inventory Management
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-sm text-muted-foreground">
               Track stock levels, movements, and alerts
             </p>
           </div>
@@ -274,7 +274,7 @@ const Inventory = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Total Products</p>
-                  <p className="text-2xl font-bold">{overviewTotal}</p>
+                  <p className="text-lg font-semibold">{overviewTotal}</p>
                 </div>
               </div>
             </CardContent>
@@ -287,7 +287,7 @@ const Inventory = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Low Stock Items</p>
-                  <p className="text-2xl font-bold text-amber-600">
+                  <p className="text-lg font-semibold text-amber-600">
                     {lowStockData?.total ?? "—"}
                   </p>
                 </div>
@@ -302,7 +302,7 @@ const Inventory = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Recent Movements</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-lg font-semibold">
                     {movementsData?.total ?? "—"}
                   </p>
                 </div>

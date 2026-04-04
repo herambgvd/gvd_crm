@@ -265,7 +265,7 @@ const DemandForecasts = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Demand Forecasts</h1>
+            <h1 className="text-lg font-semibold">Demand Forecasts</h1>
             <p className="text-muted-foreground">
               Plan inventory based on expected demand
             </p>

@@ -70,7 +70,7 @@ const FactoryOrderDetails = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">{order.order_number}</h1>
+              <h1 className="text-lg font-semibold">{order.order_number}</h1>
               <p className="text-muted-foreground">Factory Order Details</p>
             </div>
           </div>

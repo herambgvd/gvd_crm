@@ -141,7 +141,7 @@ const Movements = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-lg font-semibold tracking-tight">
               Stock Movements
             </h1>
             <p className="text-gray-600">
@@ -162,7 +162,7 @@ const Movements = () => {
                 <Package className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{data?.total || 0}</p>
+                <p className="text-lg font-semibold">{data?.total || 0}</p>
                 <p className="text-xs text-gray-500">Total Movements</p>
               </div>
             </CardContent>
@@ -173,7 +173,7 @@ const Movements = () => {
                 <Clock className="h-5 w-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-lg font-semibold">
                   {movements.filter((m) => m.status === "pending").length}
                 </p>
                 <p className="text-xs text-gray-500">Pending</p>
@@ -186,7 +186,7 @@ const Movements = () => {
                 <Truck className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-lg font-semibold">
                   {movements.filter((m) => m.status === "shipped").length}
                 </p>
                 <p className="text-xs text-gray-500">In Transit</p>
@@ -199,7 +199,7 @@ const Movements = () => {
                 <CheckCircle className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-lg font-semibold">
                   {
                     movements.filter(
                       (m) =>

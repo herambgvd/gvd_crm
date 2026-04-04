@@ -183,7 +183,7 @@ const StockMovements = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Stock Movements</h1>
+            <h1 className="text-lg font-semibold">Stock Movements</h1>
             <p className="text-muted-foreground">
               Audit trail of all inventory movements
             </p>

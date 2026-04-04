@@ -10,17 +10,6 @@ import {
 } from "../../../components/ui/select";
 import { fetchSOPsByModule, fetchWorkflowStats } from "../api";
 
-/**
- * Dynamic stats cards that replace hardcoded status cards.
- * Shows a SOP selector and one card per state with record counts.
- *
- * Props:
- *   module: "sales" | "support" | "inventory"
- *   selectedSopId: controlled SOP ID
- *   onSopChange: (sopId) => void
- *   onStateFilter: (stateId | null) => void  — optional click-to-filter
- *   activeStateFilter: string | null
- */
 const StateStatsBar = ({
   module,
   selectedSopId,
@@ -39,7 +28,6 @@ const StateStatsBar = ({
     enabled: !!selectedSopId,
   });
 
-  // Auto-select first SOP if none selected
   React.useEffect(() => {
     if (!selectedSopId && sops.length > 0) {
       onSopChange(sops[0].id);
@@ -50,12 +38,12 @@ const StateStatsBar = ({
   const total = stats?.total || 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* SOP Selector */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-muted-foreground">SOP:</span>
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">SOP:</span>
         <Select value={selectedSopId || ""} onValueChange={onSopChange}>
-          <SelectTrigger className="w-64">
+          <SelectTrigger className="w-56 h-8 text-xs">
             <SelectValue placeholder="Select SOP" />
           </SelectTrigger>
           <SelectContent>
@@ -70,42 +58,42 @@ const StateStatsBar = ({
 
       {/* Stats Cards */}
       {selectedSopId && (
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           {/* Total card */}
           <Card
-            className={`cursor-pointer transition-all min-w-[120px] ${
+            className={`cursor-pointer transition-all ${
               !activeStateFilter
-                ? "ring-2 ring-primary"
-                : "hover:shadow-md"
+                ? "ring-1 ring-primary shadow-sm"
+                : "hover:shadow-sm"
             }`}
             onClick={() => onStateFilter?.(null)}
           >
-            <CardContent className="p-4">
-              <p className="text-xs font-medium text-muted-foreground uppercase">
+            <CardContent className="px-3 py-2">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                 Total
               </p>
-              <p className="text-2xl font-bold">{total}</p>
+              <p className="text-lg font-bold leading-tight">{total}</p>
             </CardContent>
           </Card>
 
           {statesList.map((state) => (
             <Card
               key={state.id}
-              className={`cursor-pointer transition-all min-w-[120px] ${
+              className={`cursor-pointer transition-all ${
                 activeStateFilter === state.id
-                  ? "ring-2 ring-primary"
-                  : "hover:shadow-md"
+                  ? "ring-1 ring-primary shadow-sm"
+                  : "hover:shadow-sm"
               }`}
               onClick={() => onStateFilter?.(state.id)}
             >
-              <CardContent className="p-4">
+              <CardContent className="px-3 py-2">
                 <p
-                  className="text-xs font-medium uppercase"
+                  className="text-[10px] font-medium uppercase tracking-wider"
                   style={{ color: state.color }}
                 >
                   {state.name}
                 </p>
-                <p className="text-2xl font-bold">{state.count}</p>
+                <p className="text-lg font-bold leading-tight">{state.count}</p>
               </CardContent>
             </Card>
           ))}

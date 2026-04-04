@@ -133,10 +133,10 @@ const Leads = () => {
       <div className="space-y-6" data-testid="leads-page">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold font-heading tracking-tight">
+            <h1 className="text-xl font-semibold tracking-tight">
               Leads
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-sm text-muted-foreground">
               Manage your sales leads across all channels
             </p>
           </div>

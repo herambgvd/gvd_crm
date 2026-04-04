@@ -240,7 +240,7 @@ const DemandForecastForm = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-lg font-semibold">
               {isViewMode
                 ? "Forecast Details"
                 : id

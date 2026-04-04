@@ -80,41 +80,39 @@ function SortableStateItem({ state, onEdit, onDelete }) {
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+      className="flex items-center gap-2.5 px-3 py-2 rounded-md border border-border/60 bg-card text-sm"
     >
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing text-muted-foreground"
+        className="cursor-grab active:cursor-grabbing text-muted-foreground/50 hover:text-muted-foreground"
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical className="h-3.5 w-3.5" />
       </button>
 
       <div
-        className="w-4 h-4 rounded-full flex-shrink-0"
+        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
         style={{ backgroundColor: state.color }}
       />
 
-      <div className="flex-1 min-w-0">
-        <span className="font-medium text-sm">{state.name}</span>
-        <div className="flex gap-1 mt-0.5">
-          {state.is_start && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0">
-              Start
-            </Badge>
-          )}
-          {state.is_end && (
-            <Badge variant="outline" className="text-[10px] px-1 py-0">
-              End
-            </Badge>
-          )}
-        </div>
+      <div className="flex-1 min-w-0 flex items-center gap-1.5">
+        <span className="font-medium text-xs">{state.name}</span>
+        {state.is_start && (
+          <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 leading-none text-muted-foreground">
+            start
+          </Badge>
+        )}
+        {state.is_end && (
+          <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 leading-none text-muted-foreground">
+            end
+          </Badge>
+        )}
       </div>
 
-      <Button variant="ghost" size="icon" onClick={() => onEdit(state)}>
+      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(state)}>
         <Edit className="h-3 w-3" />
       </Button>
-      <Button variant="ghost" size="icon" onClick={() => onDelete(state.id)}>
+      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onDelete(state.id)}>
         <Trash2 className="h-3 w-3 text-destructive" />
       </Button>
     </div>
@@ -313,43 +311,43 @@ const SOPBuilder = () => {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-4xl">
+      <div className="space-y-4 max-w-3xl">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
+            className="h-7 w-7"
             onClick={() => navigate("/settings/workflows")}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5" />
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">
-              {isEdit ? "Edit SOP" : "Create SOP"}
-            </h1>
-          </div>
+          <h1 className="text-lg font-semibold tracking-tight">
+            {isEdit ? "Edit SOP" : "Create SOP"}
+          </h1>
         </div>
 
         {/* Basic Info */}
-        <Card>
-          <CardContent className="p-5 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+        <Card className="border-border/60">
+          <CardContent className="p-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>SOP Name *</Label>
+                <Label className="text-xs">SOP Name *</Label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g., Hardware Sales SOP"
+                  className="h-8 text-sm"
                 />
               </div>
               <div>
-                <Label>Module *</Label>
+                <Label className="text-xs">Module *</Label>
                 <Select
                   value={module}
                   onValueChange={setModule}
                   disabled={isEdit}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="Select module" />
                   </SelectTrigger>
                   <SelectContent>
@@ -361,43 +359,44 @@ const SOPBuilder = () => {
               </div>
             </div>
             <div>
-              <Label>Description</Label>
+              <Label className="text-xs">Description</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Optional description..."
                 rows={2}
+                className="text-sm"
               />
             </div>
           </CardContent>
         </Card>
 
         {/* States */}
-        <Card>
-          <CardContent className="p-5 space-y-4">
+        <Card className="border-border/60">
+          <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-lg">Pipeline States</h2>
-              <Button variant="outline" size="sm" onClick={addState}>
+              <h2 className="text-sm font-semibold">Pipeline States</h2>
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={addState}>
                 <Plus className="mr-1 h-3 w-3" />
                 Add State
               </Button>
             </div>
 
             {states.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No states defined. Add states to build your pipeline.
+              <p className="text-xs text-muted-foreground text-center py-6">
+                No states defined yet. Add states to build your pipeline.
               </p>
             ) : (
               <>
                 {/* Pipeline preview */}
-                <div className="flex items-center gap-1 flex-wrap p-3 bg-muted rounded-lg">
+                <div className="flex items-center gap-1 flex-wrap px-3 py-2 bg-muted/50 rounded-md">
                   {states.map((state, idx) => (
                     <React.Fragment key={state.id}>
                       {idx > 0 && (
-                        <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/60 flex-shrink-0" />
                       )}
                       <span
-                        className="text-xs px-2 py-1 rounded text-white font-medium"
+                        className="text-[10px] px-1.5 py-0.5 rounded text-white font-medium"
                         style={{ backgroundColor: state.color }}
                       >
                         {state.name}
@@ -434,13 +433,14 @@ const SOPBuilder = () => {
         </Card>
 
         {/* Transitions */}
-        <Card>
-          <CardContent className="p-5 space-y-4">
+        <Card className="border-border/60">
+          <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-lg">Transitions</h2>
+              <h2 className="text-sm font-semibold">Transitions</h2>
               <Button
                 variant="outline"
                 size="sm"
+                className="h-7 text-xs"
                 onClick={addTransition}
                 disabled={states.length < 2}
               >
@@ -450,48 +450,51 @@ const SOPBuilder = () => {
             </div>
 
             {transitions.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No transitions defined. Add transitions to connect states.
+              <p className="text-xs text-muted-foreground text-center py-6">
+                No transitions defined yet. Add transitions to connect states.
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {transitions.map((t) => (
                   <div
                     key={t.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border"
+                    className="group flex items-center gap-2 px-3 py-2 rounded-md border border-border/60 text-xs"
                   >
-                    <div className="flex-1 flex items-center gap-2 text-sm">
+                    <div className="flex-1 flex items-center gap-1.5">
                       <span className="font-medium">
                         {stateMap[t.from_state_id] || "?"}
                       </span>
-                      <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                      <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/60" />
                       <span className="font-medium">
                         {stateMap[t.to_state_id] || "?"}
                       </span>
-                      <Badge variant="secondary" className="text-xs ml-2">
+                      <Badge variant="secondary" className="text-[10px] ml-1.5 h-4 px-1.5">
                         {t.name}
                       </Badge>
                       {t.form_fields?.length > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          ({t.form_fields.length} field
-                          {t.form_fields.length > 1 ? "s" : ""})
+                        <span className="text-[10px] text-muted-foreground">
+                          · {t.form_fields.length} field{t.form_fields.length > 1 ? "s" : ""}
                         </span>
                       )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setTransitionDialog(t)}
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteTransition(t.id)}
-                    >
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </Button>
+                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setTransitionDialog(t)}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => deleteTransition(t.id)}
+                      >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -500,15 +503,16 @@ const SOPBuilder = () => {
         </Card>
 
         {/* Save */}
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-2 pt-1">
           <Button
             variant="outline"
+            size="sm"
             onClick={() => navigate("/settings/workflows")}
           >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saveMutation.isPending}>
-            <Save className="mr-2 h-4 w-4" />
+          <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending}>
+            <Save className="mr-1.5 h-3.5 w-3.5" />
             {saveMutation.isPending
               ? "Saving..."
               : isEdit

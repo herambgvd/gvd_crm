@@ -91,10 +91,10 @@ const Dashboard = () => {
     <Layout>
       <div className="space-y-8" data-testid="dashboard-page">
         <div>
-          <h1 className="text-4xl font-bold font-heading tracking-tight">
+          <h1 className="text-xl font-semibold tracking-tight">
             Dashboard
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-sm text-muted-foreground">
             Overview of your sales pipeline and performance
           </p>
         </div>
@@ -118,7 +118,7 @@ const Dashboard = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold font-mono">
+                  <div className="text-lg font-semibold font-mono">
                     {stat.value}
                   </div>
                 </CardContent>

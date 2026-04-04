@@ -281,7 +281,7 @@ const EnquiryForm = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold font-heading tracking-tight">
+            <h1 className="text-lg font-semibold tracking-tight">
               {isEdit ? "Edit Enquiry" : "New Enquiry"}
             </h1>
             <p className="text-gray-500 mt-1">

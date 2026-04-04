@@ -98,7 +98,7 @@ const InventoryDashboard = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Inventory Management</h1>
+            <h1 className="text-lg font-semibold">Inventory Management</h1>
             <p className="text-muted-foreground">
               Track stock across all stages - from factory orders to customer
               delivery
@@ -192,7 +192,7 @@ const InventoryDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-700">
+              <div className="text-lg font-semibold text-yellow-700">
                 {summaryLoading ? "..." : summary?.low_stock_count || 0}
               </div>
               <p className="text-sm text-yellow-600">
@@ -217,7 +217,7 @@ const InventoryDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-700">
+              <div className="text-lg font-semibold text-red-700">
                 {summaryLoading ? "..." : summary?.out_of_stock_count || 0}
               </div>
               <p className="text-sm text-red-600">Products with zero stock</p>

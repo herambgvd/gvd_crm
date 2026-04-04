@@ -52,7 +52,7 @@ const Customers = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Customer Master</h1>
+            <h1 className="text-lg font-semibold">Customer Master</h1>
             <p className="text-sm text-gray-500">{total} customers total</p>
           </div>
           <Button onClick={() => navigate("/customers/new")}>

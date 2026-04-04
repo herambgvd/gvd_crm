@@ -104,7 +104,7 @@ const PITemplatePreview = ({ poData, template }) => {
               </div>
             ) : (
               <div className="text-center p-8 bg-gray-50 mb-6">
-                <h1 className="text-4xl font-bold text-gray-900">
+                <h1 className="text-xl font-semibold text-gray-900">
                   {template.company_name || "Flowops"}
                 </h1>
                 {template.company_address && (

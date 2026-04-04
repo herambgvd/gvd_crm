@@ -452,10 +452,10 @@ const Categories = () => {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-4xl font-bold font-heading tracking-tight">
+              <h1 className="text-xl font-semibold tracking-tight">
                 Product Categories
               </h1>
-              <p className="text-gray-600 mt-2">
+              <p className="text-sm text-muted-foreground">
                 Manage categories and subcategories
               </p>
             </div>
@@ -474,7 +474,7 @@ const Categories = () => {
                 <FolderTree className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{totalCategories}</p>
+                <p className="text-lg font-semibold">{totalCategories}</p>
                 <p className="text-xs text-gray-500">Total Categories</p>
               </div>
             </CardContent>
@@ -485,7 +485,7 @@ const Categories = () => {
                 <Tag className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{totalParents}</p>
+                <p className="text-lg font-semibold">{totalParents}</p>
                 <p className="text-xs text-gray-500">Parent Categories</p>
               </div>
             </CardContent>
@@ -496,7 +496,7 @@ const Categories = () => {
                 <ChevronRight className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{totalSubs}</p>
+                <p className="text-lg font-semibold">{totalSubs}</p>
                 <p className="text-xs text-gray-500">Subcategories</p>
               </div>
             </CardContent>

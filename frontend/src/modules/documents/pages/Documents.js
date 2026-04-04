@@ -105,10 +105,10 @@ const Documents = () => {
       <div className="space-y-6" data-testid="documents-page">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold font-heading tracking-tight">
+            <h1 className="text-xl font-semibold tracking-tight">
               Documents
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-sm text-muted-foreground">
               Manage all PDF documents and attachments
             </p>
           </div>

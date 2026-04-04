@@ -11,8 +11,15 @@ Usage:
 """
 
 import asyncio
+import sys
+import os
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
+
+# Add backend root to path so core.config can be imported
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from motor.motor_asyncio import AsyncIOMotorClient
 from core.config import settings
 

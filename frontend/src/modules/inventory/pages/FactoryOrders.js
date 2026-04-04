@@ -209,7 +209,7 @@ const FactoryOrders = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Factory Orders</h1>
+            <h1 className="text-lg font-semibold">Factory Orders</h1>
             <p className="text-muted-foreground">
               Purchase orders placed to manufacturers/suppliers
             </p>

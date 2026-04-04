@@ -265,7 +265,7 @@ const WarehouseStock = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Warehouse Stock</h1>
+            <h1 className="text-lg font-semibold">Warehouse Stock</h1>
             <p className="text-muted-foreground">
               Manage inventory across all stock types
             </p>
@@ -280,7 +280,7 @@ const WarehouseStock = () => {
                 <div className="w-3 h-3 rounded-full bg-purple-500" />
                 <span className="text-sm text-muted-foreground">Demo</span>
               </div>
-              <p className="text-2xl font-bold">
+              <p className="text-lg font-semibold">
                 {summary.total_demo_quantity || 0}
               </p>
             </CardContent>
@@ -291,7 +291,7 @@ const WarehouseStock = () => {
                 <div className="w-3 h-3 rounded-full bg-green-500" />
                 <span className="text-sm text-muted-foreground">Sales</span>
               </div>
-              <p className="text-2xl font-bold">
+              <p className="text-lg font-semibold">
                 {summary.total_sales_quantity || 0}
               </p>
             </CardContent>
@@ -302,7 +302,7 @@ const WarehouseStock = () => {
                 <div className="w-3 h-3 rounded-full bg-red-500" />
                 <span className="text-sm text-muted-foreground">RMA</span>
               </div>
-              <p className="text-2xl font-bold">
+              <p className="text-lg font-semibold">
                 {summary.total_rma_quantity || 0}
               </p>
             </CardContent>
@@ -313,7 +313,7 @@ const WarehouseStock = () => {
                 <AlertTriangle className="w-4 h-4 text-amber-500" />
                 <span className="text-sm text-muted-foreground">Low Stock</span>
               </div>
-              <p className="text-2xl font-bold text-amber-600">
+              <p className="text-lg font-semibold text-amber-600">
                 {summary.low_stock_count || 0}
               </p>
             </CardContent>

@@ -224,7 +224,7 @@ const MovementCategories = () => {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className="text-lg font-semibold tracking-tight">
                 Movement Categories
               </h1>
               <p className="text-gray-600">
@@ -246,7 +246,7 @@ const MovementCategories = () => {
                 <Tag className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{categories.length}</p>
+                <p className="text-lg font-semibold">{categories.length}</p>
                 <p className="text-xs text-gray-500">Total Categories</p>
               </div>
             </CardContent>
@@ -257,7 +257,7 @@ const MovementCategories = () => {
                 <ArrowUpCircle className="h-5 w-5 text-red-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-lg font-semibold">
                   {categories.filter((c) => c.direction === "out").length}
                 </p>
                 <p className="text-xs text-gray-500">Outgoing Types</p>
@@ -270,7 +270,7 @@ const MovementCategories = () => {
                 <ArrowDownCircle className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
+                <p className="text-lg font-semibold">
                   {categories.filter((c) => c.direction === "in").length}
                 </p>
                 <p className="text-xs text-gray-500">Incoming Types</p>

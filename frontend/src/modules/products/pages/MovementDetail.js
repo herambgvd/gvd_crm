@@ -240,7 +240,7 @@ const MovementDetail = () => {
             </Button>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold tracking-tight">
+                <h1 className="text-lg font-semibold tracking-tight">
                   {movement?.uid || `Movement #${id?.slice(-6)}`}
                 </h1>
                 {getStatusBadge(movement?.status)}

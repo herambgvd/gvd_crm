@@ -118,7 +118,7 @@ const TicketForm = () => {
             Back to Tickets
           </Button>
           <div>
-            <h1 className="text-3xl font-bold font-heading tracking-tight">
+            <h1 className="text-lg font-semibold tracking-tight">
               Create Support Ticket
             </h1>
             <p className="text-muted-foreground mt-1">

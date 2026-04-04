@@ -279,10 +279,10 @@ const Entities = () => {
       <div className="space-y-6" data-testid="entities-page">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold font-heading tracking-tight">
+            <h1 className="text-xl font-semibold tracking-tight">
               Entity Master
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-sm text-muted-foreground">
               Manage consultants, dealers, system integrators, and distributors
             </p>
           </div>

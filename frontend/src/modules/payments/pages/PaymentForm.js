@@ -294,7 +294,7 @@ const PaymentForm = () => {
             Back to Payments
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-lg font-semibold tracking-tight">
               {isEditing ? "Edit Payment" : "Create Payment"}
             </h1>
             <p className="text-muted-foreground">

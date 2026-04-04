@@ -228,7 +228,7 @@ const InTransitForm = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-lg font-semibold">
               {isEdit ? "Edit Shipment" : "New Shipment"}
             </h1>
             <p className="text-muted-foreground">

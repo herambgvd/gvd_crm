@@ -108,10 +108,10 @@ const Warranties = () => {
       <div className="space-y-6" data-testid="warranties-page">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-4xl font-bold font-heading tracking-tight">
+            <h1 className="text-xl font-semibold tracking-tight">
               Warranties
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-sm text-muted-foreground">
               Manage product warranties and RMA tracking
             </p>
           </div>

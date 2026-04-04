@@ -836,11 +836,11 @@ const LeadDetail = () => {
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <CardTitle className="text-4xl font-bold font-heading text-blue-600">
+                <CardTitle className="text-xl font-semibold text-blue-600">
                   {lead.project_name || "Untitled Project"}
                 </CardTitle>
                 {lead.customer_name && (
-                  <p className="text-lg text-gray-600 mt-2 flex items-center gap-2">
+                  <p className="text-lg text-sm text-muted-foreground flex items-center gap-2">
                     <Building className="h-4 w-4" />
                     {lead.customer_name}
                   </p>

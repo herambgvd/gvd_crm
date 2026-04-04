@@ -200,7 +200,7 @@ const EntityDetail = () => {
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-2xl font-bold">{entity.company_name}</h1>
+                <h1 className="text-lg font-semibold">{entity.company_name}</h1>
                 <p className="text-gray-500 mt-1">{entity.contact_person}</p>
                 <span className="mt-2 inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                   {ENTITY_TYPE_LABELS[entity.entity_type] || entity.entity_type}

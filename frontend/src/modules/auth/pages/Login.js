@@ -34,10 +34,10 @@ const Login = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-md space-y-8">
           <div>
-            <h1 className="text-4xl font-bold font-heading tracking-tight">
+            <h1 className="text-xl font-semibold tracking-tight">
               Flowops
             </h1>
-            <h2 className="mt-6 text-3xl font-bold font-heading">
+            <h2 className="mt-6 text-lg font-semibold">
               Sign in to your account
             </h2>
             <p className="mt-2 text-sm text-gray-600">

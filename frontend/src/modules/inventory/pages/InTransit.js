@@ -240,7 +240,7 @@ const InTransit = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">In-Transit Inventory</h1>
+            <h1 className="text-lg font-semibold">In-Transit Inventory</h1>
             <p className="text-muted-foreground">
               Track shipments from factory to warehouse
             </p>
