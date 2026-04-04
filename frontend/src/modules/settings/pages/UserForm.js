@@ -57,7 +57,6 @@ const UserForm = () => {
 
   useEffect(() => {
     if (userData && isEditing) {
-      console.log("Setting form data from userData:", userData);
       setFormData({
         name: userData.name || "",
         email: userData.email || "",
@@ -70,7 +69,6 @@ const UserForm = () => {
         is_active: userData.is_active ?? true,
         is_email_verified: userData.is_email_verified ?? false,
       });
-      console.log("Updated form data designation:", userData.designation);
     }
   }, [userData, isEditing]);
 
@@ -88,7 +86,6 @@ const UserForm = () => {
       navigate("/settings/users");
     },
     onError: (error) => {
-      console.error("User operation error:", error);
       let errorMessage = `Failed to ${isEditing ? "update" : "create"} user`;
 
       if (error.response?.data) {
@@ -197,7 +194,6 @@ const UserForm = () => {
       submitData.password = formData.password;
     }
 
-    console.log("Submitting user data:", submitData);
     mutation.mutate(submitData);
   };
 

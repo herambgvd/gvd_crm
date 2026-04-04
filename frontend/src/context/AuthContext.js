@@ -3,7 +3,7 @@ import axios from "axios";
 
 const AuthContext = createContext(null);
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
+import { BACKEND_URL } from "../lib/axios";
 const API = `${BACKEND_URL}/api/v1`;
 
 const clearTokens = () => {

@@ -35,7 +35,6 @@ const BOQVersionHistory = ({ boqId, isOpen, onClose }) => {
       const response = await api.get(`/boqs/${boqId}/version-history`);
       setVersionHistory(response.data);
     } catch (error) {
-      console.error("Failed to fetch version history:", error);
       setError("Failed to load version history");
     } finally {
       setLoading(false);

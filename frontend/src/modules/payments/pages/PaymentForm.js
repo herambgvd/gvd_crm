@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Layout } from "../../../components";
+import { BACKEND_URL } from "../../../lib/axios";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
@@ -545,10 +546,7 @@ const PaymentForm = () => {
                           />
                         ) : (
                           <img
-                            src={`${
-                              process.env.REACT_APP_BACKEND_URL ||
-                              "http://localhost:8000"
-                            }/api/payments/${id}/receipt`}
+                            src={`${BACKEND_URL}/api/payments/${id}/receipt`}
                             alt="Current receipt"
                             className="w-full h-auto max-h-64 object-contain"
                             onError={(e) => {

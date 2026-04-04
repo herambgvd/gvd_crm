@@ -5,6 +5,7 @@ import { fetchBOQ } from "../api";
 import { fetchLead } from "../../leads/api";
 import { fetchDefaultTemplate } from "../../settings/api";
 import { Layout } from "../../../components";
+import { BACKEND_URL } from "../../../lib/axios";
 import { Button } from "../../../components/ui/button";
 import {
   Card,
@@ -101,10 +102,7 @@ const BOQViewer = () => {
                 {boqTemplate?.header_image_url ? (
                   <div className="w-full mb-6">
                     <img
-                      src={`${
-                        process.env.REACT_APP_BACKEND_URL ||
-                        "http://localhost:8000"
-                      }${boqTemplate.header_image_url}`}
+                      src={`${BACKEND_URL}${boqTemplate.header_image_url}`}
                       alt="Company Header"
                       className="w-full object-contain"
                       style={{ display: "block" }}
@@ -358,10 +356,7 @@ const BOQViewer = () => {
               {boqTemplate?.footer_image_url ? (
                 <div className="w-full mt-8">
                   <img
-                    src={`${
-                      process.env.REACT_APP_BACKEND_URL ||
-                      "http://localhost:8000"
-                    }${boqTemplate.footer_image_url}`}
+                    src={`${BACKEND_URL}${boqTemplate.footer_image_url}`}
                     alt="Company Footer"
                     className="w-full h-auto max-h-32 object-contain"
                   />

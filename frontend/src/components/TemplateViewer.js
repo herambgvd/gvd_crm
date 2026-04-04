@@ -11,6 +11,7 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { X, Edit, Image, FileText } from "lucide-react";
 import { format } from "date-fns";
+import { BACKEND_URL } from "../lib/axios";
 
 const TemplateViewer = ({ template, isOpen, onClose, onEdit }) => {
   if (!template) return null;
@@ -203,10 +204,7 @@ const TemplateViewer = ({ template, isOpen, onClose, onEdit }) => {
                     </label>
                     <div className="border rounded-lg p-4 bg-gray-50">
                       <img
-                        src={`${
-                          process.env.REACT_APP_BACKEND_URL ||
-                          "http://localhost:8000"
-                        }${template.header_image_url}`}
+                        src={`${BACKEND_URL}${template.header_image_url}`}
                         alt="Header"
                         className="max-w-full h-auto max-h-32 mx-auto rounded"
                         onError={(e) => {
@@ -231,10 +229,7 @@ const TemplateViewer = ({ template, isOpen, onClose, onEdit }) => {
                     </label>
                     <div className="border rounded-lg p-4 bg-gray-50">
                       <img
-                        src={`${
-                          process.env.REACT_APP_BACKEND_URL ||
-                          "http://localhost:8000"
-                        }${template.footer_image_url}`}
+                        src={`${BACKEND_URL}${template.footer_image_url}`}
                         alt="Footer"
                         className="max-w-full h-auto max-h-32 mx-auto rounded"
                         onError={(e) => {

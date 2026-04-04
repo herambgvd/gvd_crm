@@ -241,8 +241,6 @@ const BOQs = () => {
       return;
     }
 
-    console.log("Submitting BOQ:", { editingBOQ, formData });
-
     if (editingBOQ) {
       // Prepare update data - only send fields that can be updated
       const updateData = {
@@ -251,7 +249,6 @@ const BOQs = () => {
         items: formData.items,
         tax_percentage: formData.tax_percentage,
       };
-      console.log("Update data:", updateData);
       updateMutation.mutate({ id: editingBOQ.id, data: updateData });
     } else {
       const createData = {
@@ -260,7 +257,6 @@ const BOQs = () => {
         items: formData.items,
         tax_percentage: formData.tax_percentage,
       };
-      console.log("Create data:", createData);
       createMutation.mutate(createData);
     }
   };

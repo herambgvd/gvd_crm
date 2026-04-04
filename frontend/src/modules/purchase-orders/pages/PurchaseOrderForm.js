@@ -76,22 +76,6 @@ const PurchaseOrderForm = () => {
     ? proformaInvoices.filter((pi) => pi.lead_id === derivedLeadId)
     : proformaInvoices;
 
-  // Debug logging
-  React.useEffect(() => {
-    console.log("All proforma invoices:", proformaInvoices);
-    console.log("Filtered proforma invoices:", filteredProformaInvoices);
-    console.log("Lead ID from URL:", leadId);
-    console.log("Derived Lead ID:", derivedLeadId);
-    console.log("Is editing:", isEdit);
-    console.log("Is view mode:", isViewMode);
-  }, [
-    proformaInvoices,
-    filteredProformaInvoices,
-    leadId,
-    derivedLeadId,
-    isEdit,
-    isViewMode,
-  ]);
 
   const { data: purchaseOrder, isLoading: isLoadingPO } = useQuery({
     queryKey: ["purchaseOrder", id],

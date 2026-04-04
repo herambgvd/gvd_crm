@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "../../../components";
+import { BACKEND_URL } from "../../../lib/axios";
 import {
   createSalesOrder,
   updateSalesOrder,
@@ -54,8 +55,6 @@ import { format } from "date-fns";
 
 // PI Template Preview Component
 const PITemplatePreview = ({ poData, template }) => {
-  const BACKEND_URL =
-    process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 
   if (!template) {
     template = {
@@ -437,7 +436,6 @@ const SalesOrderForm = () => {
 
   useEffect(() => {
     if (order) {
-      console.log("Loading order data:", order); // Debug log
       setFormData({
         lead_id: order.lead_id,
         channel: order.channel || "",
@@ -549,7 +547,6 @@ const SalesOrderForm = () => {
       navigate(`/leads/${formData.lead_id}`);
     },
     onError: (error) => {
-      console.error("Create PO error:", error);
       let errorMessage = "Failed to create sales order";
 
       try {
@@ -582,7 +579,6 @@ const SalesOrderForm = () => {
           }
         }
       } catch (parseError) {
-        console.error("Error parsing error response:", parseError);
         errorMessage = "Failed to create sales order - Invalid response";
       }
 
@@ -599,7 +595,6 @@ const SalesOrderForm = () => {
       navigate(`/leads/${formData.lead_id}`);
     },
     onError: (error) => {
-      console.error("Update PO error:", error);
       let errorMessage = "Failed to update sales order";
 
       try {
@@ -632,7 +627,6 @@ const SalesOrderForm = () => {
           }
         }
       } catch (parseError) {
-        console.error("Error parsing error response:", parseError);
         errorMessage = "Failed to update sales order - Invalid response";
       }
 
@@ -649,7 +643,6 @@ const SalesOrderForm = () => {
       navigate(`/leads/${formData.lead_id}`);
     },
     onError: (error) => {
-      console.error("Delete PO error:", error);
       const errorMessage =
         error.response?.data?.detail ||
         error.message ||
@@ -702,7 +695,6 @@ const SalesOrderForm = () => {
 
           setPreviewData(enrichedPreview);
         } catch (error) {
-          console.error("Failed to load preview:", error);
           const errorMessage =
             error.response?.data?.detail ||
             error.message ||
@@ -749,8 +741,6 @@ const SalesOrderForm = () => {
       ...formData,
       items: transformedItems,
     };
-
-    console.log("Creating order with data:", submitData);
 
     if (isEdit) {
       updateMutation.mutate(submitData);

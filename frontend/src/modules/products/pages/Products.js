@@ -2,6 +2,7 @@ import React, { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "../../../components";
+import { BACKEND_URL } from "../../../lib/axios";
 import {
   fetchProducts,
   deleteProduct,
@@ -68,9 +69,6 @@ import {
   SelectValue,
 } from "../../../components/ui/select";
 
-const BACKEND_URL =
-  process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
-
 const Products = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -108,13 +106,6 @@ const Products = () => {
     queryFn: fetchStockSummary,
     staleTime: 30 * 1000,
   });
-
-  // Debug log
-  React.useEffect(() => {
-    if (stockSummary) {
-      console.log("Stock Summary Data:", stockSummary);
-    }
-  }, [stockSummary]);
 
   // Fetch category tree from backend
   const { data: categoryTree = [] } = useQuery({

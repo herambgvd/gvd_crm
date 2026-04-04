@@ -42,7 +42,6 @@ const Users = () => {
       toast.success("User deleted successfully!");
     },
     onError: (error) => {
-      console.error("Delete user error:", error);
       let errorMessage = "Failed to delete user";
 
       if (error.response?.data) {

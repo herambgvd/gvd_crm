@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Layout } from "../../../components";
+import { BACKEND_URL } from "../../../lib/axios";
 import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -317,10 +318,7 @@ const Payments = () => {
                                 <DropdownMenuItem
                                   onClick={() => {
                                     window.open(
-                                      `${
-                                        process.env.REACT_APP_BACKEND_URL ||
-                                        "http://localhost:8000"
-                                      }/api/payments/${payment.id}/receipt`,
+                                      `${BACKEND_URL}/api/payments/${payment.id}/receipt`,
                                       "_blank",
                                     );
                                   }}

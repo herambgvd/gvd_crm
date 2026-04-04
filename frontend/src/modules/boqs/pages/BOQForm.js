@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "../../../components";
+import { BACKEND_URL } from "../../../lib/axios";
 import { createBOQ, updateBOQ, fetchBOQ } from "../api";
 import { fetchProducts, fetchAllCategories } from "../../products/api";
 import { fetchLead, fetchLeadInvolvements } from "../../leads/api";
@@ -52,8 +53,6 @@ import { toast } from "sonner";
 
 // BOQ Template Preview Component
 const BOQTemplatePreview = ({ boqData, template }) => {
-  const BACKEND_URL =
-    process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 
   if (!template) {
     return (
@@ -504,10 +503,6 @@ const BOQForm = () => {
                 entity_data: entity, // Store full entity data for later use
               };
             } catch (error) {
-              console.error(
-                `Failed to fetch entity ${involvement.entity_id}:`,
-                error,
-              );
               return {
                 ...involvement,
                 entity_name: `Entity ${involvement.entity_id}`,
@@ -519,7 +514,6 @@ const BOQForm = () => {
 
         return involvementsWithEntities;
       } catch (error) {
-        console.error("Error fetching lead involvements:", error);
         return [];
       }
     },
