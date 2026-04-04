@@ -75,6 +75,19 @@ const PITemplatePreview = ({ poData, template }) => {
     }).format(amount || 0);
   };
 
+  // Fall back to template company data when from_data is empty
+  const hasStoredFrom = poData.from_data && Object.values(poData.from_data).some(Boolean);
+  const effectiveFromData = hasStoredFrom
+    ? poData.from_data
+    : {
+        company_name: template.company_name || "",
+        address: template.company_address || "",
+        phone: template.company_phone || "",
+        email: template.company_email || "",
+        website: template.company_website || "",
+        gst: template.company_gst || "",
+      };
+
   return (
     <Card className="w-full">
       <CardContent className="p-0">
@@ -86,7 +99,8 @@ const PITemplatePreview = ({ poData, template }) => {
                 <img
                   src={`${BACKEND_URL}${template.header_image_url}`}
                   alt="Company Header"
-                  className="w-full h-auto max-h-32 object-contain"
+                  className="w-full object-contain"
+                  style={{ display: "block" }}
                 />
               </div>
             ) : (
@@ -119,35 +133,34 @@ const PITemplatePreview = ({ poData, template }) => {
               </div>
 
               {/* FROM/TO Data Section */}
-              {(poData.from_data || poData.to_data) && (
+              {(effectiveFromData || poData.to_data) && (
                 <div className="grid grid-cols-2 gap-8 mt-6 mb-6">
                   {/* FROM Section */}
-                  {poData.from_data &&
-                    Object.keys(poData.from_data).length > 0 && (
+                  {effectiveFromData && Object.values(effectiveFromData).some(Boolean) && (
                       <div>
                         <h3 className="text-sm font-semibold text-gray-800 mb-3 border-b pb-1">
                           FROM:
                         </h3>
                         <div className="text-sm text-gray-700 space-y-1">
-                          {poData.from_data.company_name && (
+                          {effectiveFromData.company_name && (
                             <p className="font-semibold">
-                              {poData.from_data.company_name}
+                              {effectiveFromData.company_name}
                             </p>
                           )}
-                          {poData.from_data.address && (
-                            <p>{poData.from_data.address}</p>
+                          {effectiveFromData.address && (
+                            <p>{effectiveFromData.address}</p>
                           )}
-                          {poData.from_data.phone && (
-                            <p>Phone: {poData.from_data.phone}</p>
+                          {effectiveFromData.phone && (
+                            <p>Phone: {effectiveFromData.phone}</p>
                           )}
-                          {poData.from_data.email && (
-                            <p>Email: {poData.from_data.email}</p>
+                          {effectiveFromData.email && (
+                            <p>Email: {effectiveFromData.email}</p>
                           )}
-                          {poData.from_data.website && (
-                            <p>Website: {poData.from_data.website}</p>
+                          {effectiveFromData.website && (
+                            <p>Website: {effectiveFromData.website}</p>
                           )}
-                          {poData.from_data.gst && (
-                            <p>GST: {poData.from_data.gst}</p>
+                          {effectiveFromData.gst && (
+                            <p>GST: {effectiveFromData.gst}</p>
                           )}
                         </div>
                       </div>
@@ -255,10 +268,10 @@ const PITemplatePreview = ({ poData, template }) => {
                         {item.quantity} {item.unit || "Nos"}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 text-right border font-mono">
-                        ₹{(item.unit_price || 0).toLocaleString()}
+                        ₹{(item.price || item.unit_price || 0).toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-900 text-right border font-mono font-semibold">
-                        ₹{(item.total_price || 0).toLocaleString()}
+                        ₹{(item.total_price || (item.quantity * (item.price || item.unit_price || 0))).toLocaleString()}
                       </td>
                     </tr>
                   ))}
@@ -272,9 +285,7 @@ const PITemplatePreview = ({ poData, template }) => {
                     Subtotal:
                   </td>
                   <td className="px-4 py-3 text-right text-sm font-mono text-gray-900 border">
-                    {formatCurrency(
-                      poData.subtotal || (poData.total_amount || 0) / 1.18,
-                    )}
+                    {formatCurrency(poData.subtotal || 0)}
                   </td>
                 </tr>
                 <tr>
@@ -285,11 +296,7 @@ const PITemplatePreview = ({ poData, template }) => {
                     Tax ({poData.tax_percentage || 18}%):
                   </td>
                   <td className="px-4 py-3 text-right text-sm font-mono text-gray-900 border">
-                    {formatCurrency(
-                      poData.tax_amount ||
-                        (poData.total_amount || 0) -
-                          (poData.total_amount || 0) / 1.18,
-                    )}
+                    {formatCurrency(poData.tax_amount || 0)}
                   </td>
                 </tr>
                 <tr className="bg-gray-100">
@@ -341,7 +348,8 @@ const PITemplatePreview = ({ poData, template }) => {
               <img
                 src={`${BACKEND_URL}${template.footer_image_url}`}
                 alt="Company Footer"
-                className="w-full h-auto max-h-32 object-contain"
+                className="w-full object-contain"
+                style={{ display: "block" }}
               />
             </div>
           ) : template.company_phone || template.company_email ? (
@@ -407,18 +415,16 @@ const SalesOrderForm = () => {
   });
 
   const { data: allBOQsData } = useQuery({
-    queryKey: ["boqs", "dropdown"],
-    queryFn: () => fetchBOQs({ page_size: 500 }),
+    queryKey: ["boqs", "byLead", formData.lead_id],
+    queryFn: () => fetchBOQs({ page_size: 500, lead_id: formData.lead_id }),
+    enabled: !!formData.lead_id,
   });
 
-  // Filter BOQs to show only those from current lead
-  const boqsForLead = (allBOQsData?.items || []).filter(
-    (b) => b.lead_id === formData.lead_id,
-  );
+  const boqsForLead = allBOQsData?.items || [];
 
   const { data: poTemplate } = useQuery({
-    queryKey: ["defaultTemplate", "sales_order"],
-    queryFn: () => fetchDefaultTemplate("sales_order"),
+    queryKey: ["defaultTemplate", "invoice"],
+    queryFn: () => fetchDefaultTemplate("invoice"),
     retry: false,
     refetchOnWindowFocus: false,
   });
@@ -459,11 +465,9 @@ const SalesOrderForm = () => {
         project_name: order.project_name || "",
         items: order.items || [],
         total_amount: order.total_amount || 0,
-        subtotal: order.subtotal || (order.total_amount || 0) / 1.18,
-        tax_percentage: order.tax_percentage || 18,
-        tax_amount:
-          order.tax_amount ||
-          (order.total_amount || 0) - (order.total_amount || 0) / 1.18,
+        subtotal: order.subtotal || 0,
+        tax_percentage: order.tax_percentage || 0,
+        tax_amount: order.tax_amount || 0,
         created_date: order.created_at
           ? new Date(order.created_at).toLocaleDateString()
           : new Date().toLocaleDateString(),
@@ -474,25 +478,32 @@ const SalesOrderForm = () => {
 
       setPreviewData(orderPreviewData);
 
-      // Also try to load fresh preview from BOQ if available
+      // Load fresh BOQ data — BOQ is source of truth for items/amounts
       if (order.boq_id) {
         setIsLoadingPreview(true);
         previewPOFromBOQ(order.boq_id)
-          .then((freshPreviewData) => {
-            // Merge the fresh BOQ data with existing order data
+          .then((freshBoqData) => {
+            const freshItems = freshBoqData.items || [];
+            // Update formData with fresh BOQ items and recalculated totals
+            setFormData((prev) => ({
+              ...prev,
+              items: freshItems,
+              subtotal: freshBoqData.subtotal || prev.subtotal,
+              tax_amount: freshBoqData.tax_amount || prev.tax_amount,
+              total_amount: freshBoqData.total_amount || prev.total_amount,
+            }));
+            // Preview: keep order metadata (notes, status, dates) but use BOQ for items/amounts
             setPreviewData({
-              ...freshPreviewData,
-              ...orderPreviewData, // Order data takes precedence
-              items: order.items || freshPreviewData.items || [],
+              ...orderPreviewData,
+              items: freshItems,
+              subtotal: freshBoqData.subtotal || orderPreviewData.subtotal,
+              tax_amount: freshBoqData.tax_amount || orderPreviewData.tax_amount,
+              total_amount: freshBoqData.total_amount || orderPreviewData.total_amount,
+              from_data: orderPreviewData.from_data,
+              to_data: orderPreviewData.to_data,
             });
           })
-          .catch((error) => {
-            console.error(
-              "Failed to load fresh preview, using order data:",
-              error,
-            );
-            // Keep the order preview data we set above
-          })
+          .catch(() => { /* keep order preview data */ })
           .finally(() => setIsLoadingPreview(false));
       }
     }
@@ -675,14 +686,18 @@ const SalesOrderForm = () => {
         try {
           const preview = await previewPOFromBOQ(boqId);
 
+          // Use boq list data as source of truth (has selling price), fallback to preview
+          const freshItems = boq.items?.length ? boq.items : (preview.items || []);
           const enrichedPreview = {
             ...preview,
+            items: freshItems,
             from_data: boq.from_data || {},
             to_data: boq.to_data || {},
             project_name: boq.project_name || lead?.project_name,
-            subtotal: boq.subtotal || 0,
-            tax_percentage: boq.tax_percentage || 0,
-            tax_amount: boq.tax_amount || 0,
+            subtotal: boq.subtotal || preview.subtotal || 0,
+            tax_percentage: boq.tax_percentage ?? preview.tax_percentage ?? 0,
+            tax_amount: boq.tax_amount ?? preview.tax_amount ?? 0,
+            total_amount: boq.total_amount || preview.total_amount || 0,
           };
 
           setPreviewData(enrichedPreview);
@@ -714,7 +729,7 @@ const SalesOrderForm = () => {
       return;
     }
 
-    // Transform BOQ items to PIItem schema
+    // Transform BOQ items to PIItem schema — preserve price (selling price) for backend recalc
     const transformedItems = formData.items.map((item) => ({
       product_id: item.product_id || "",
       product_code: item.product_code || "",
@@ -724,6 +739,8 @@ const SalesOrderForm = () => {
       specifications: item.specifications || [],
       quantity: item.quantity || 0,
       unit_price: item.unit_price || 0.0,
+      price: item.price || item.unit_price || 0.0,
+      percentage: item.percentage || 0,
       total_price: item.total_price || 0.0,
       unit: item.unit || "",
     }));
@@ -744,7 +761,7 @@ const SalesOrderForm = () => {
 
   if (isLoadingOrder) {
     return (
-      <Layout>
+      <Layout sidebarCollapsed={true}>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
@@ -776,12 +793,17 @@ const SalesOrderForm = () => {
                     ? "Edit Proforma Invoice"
                     : "Create New Proforma Invoice"}
                 </CardTitle>
-                {lead && (
+                {(lead || formData.to_data?.company_name) && (
                   <p className="text-sm text-gray-600">
-                    For: {lead.contact_name} - {lead.company}
-                    {lead.project_name && (
+                    For:{" "}
+                    {formData.to_data?.company_name ||
+                      [lead?.contact_name, lead?.company]
+                        .filter(Boolean)
+                        .join(" - ") ||
+                      "—"}
+                    {(lead?.project_name || formData.project_name) && (
                       <span className="ml-2 font-semibold">
-                        | Project: {lead.project_name}
+                        | Project: {lead?.project_name || formData.project_name}
                       </span>
                     )}
                   </p>
@@ -1170,25 +1192,17 @@ const SalesOrderForm = () => {
                     ...(previewData || {}),
                     status: formData.status,
                     notes: formData.notes,
-                    items: formData.items || previewData?.items || [],
-                    total_amount:
-                      formData.total_amount || previewData?.total_amount || 0,
-                    subtotal: formData.subtotal || previewData?.subtotal || 0,
-                    tax_percentage:
-                      formData.tax_percentage ||
-                      previewData?.tax_percentage ||
-                      0,
-                    tax_amount:
-                      formData.tax_amount || previewData?.tax_amount || 0,
+                    // Prefer previewData items (fresh from BOQ) over formData items (may be stale)
+                    items: previewData?.items?.length ? previewData.items : (formData.items || []),
+                    total_amount: previewData?.total_amount || formData.total_amount || 0,
+                    subtotal: previewData?.subtotal || formData.subtotal || 0,
+                    tax_percentage: previewData?.tax_percentage ?? formData.tax_percentage ?? 0,
+                    tax_amount: previewData?.tax_amount ?? formData.tax_amount ?? 0,
                     channel: formData.channel || previewData?.channel || "",
-                    project_name:
-                      formData.project_name || previewData?.project_name || "",
+                    project_name: formData.project_name || previewData?.project_name || "",
                     order_number: previewData?.order_number || "GVD-PI-000001",
-                    created_date:
-                      previewData?.created_date ||
-                      new Date().toLocaleDateString(),
-                    from_data:
-                      formData.from_data || previewData?.from_data || {},
+                    created_date: previewData?.created_date || new Date().toLocaleDateString(),
+                    from_data: formData.from_data || previewData?.from_data || {},
                     to_data: formData.to_data || previewData?.to_data || {},
                   }}
                   template={poTemplate}

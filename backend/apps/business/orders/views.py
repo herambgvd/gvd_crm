@@ -25,7 +25,7 @@ router = APIRouter(tags=["orders"])
 @router.get("/boqs/")
 async def get_boqs(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=1000),
     status: Optional[str] = Query(None),
     lead_id: Optional[str] = Query(None),
     entity_id: Optional[str] = Query(None),
@@ -139,8 +139,9 @@ async def get_sales_order_stats(
 @router.get("/sales-orders/")
 async def get_sales_orders(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=1000),
     status: Optional[str] = Query(None),
+    lead_id: Optional[str] = Query(None),
     entity_id: Optional[str] = Query(None),
     assigned_to: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
@@ -149,7 +150,7 @@ async def get_sales_orders(
     """List sales orders with server-side pagination."""
     return await sales_order_service.list_sales_orders(
         page=page, page_size=page_size,
-        status=status, entity_id=entity_id, assigned_to=assigned_to, search=search,
+        status=status, lead_id=lead_id, entity_id=entity_id, assigned_to=assigned_to, search=search,
     )
 
 
@@ -236,11 +237,7 @@ async def create_sales_order(
     data: SalesOrderCreate,
     current_user=Depends(require_permission("orders:create")),
 ):
-    """Create a new sales order."""
-    existing = await sales_order_service.get_by_field("order_number", data.order_number)
-    if existing:
-        raise HTTPException(status_code=400, detail="Order number already exists")
-
+    """Create a new Proforma Invoice (sales order)."""
     return await sales_order_service.create_sales_order(
         data.model_dump(exclude_unset=True), user_id=current_user.id,
     )

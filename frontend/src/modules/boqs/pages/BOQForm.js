@@ -100,8 +100,8 @@ const BOQTemplatePreview = ({ boqData, template }) => {
                 <img
                   src={`${BACKEND_URL}${template.header_image_url}`}
                   alt="Company Header"
-                  className="w-full h-24 object-contain bg-gray-50 border-b"
-                  style={{ maxHeight: "96px", minHeight: "96px" }}
+                  className="w-full object-contain"
+                  style={{ display: "block" }}
                 />
               </div>
             ) : (
@@ -341,12 +341,12 @@ const BOQTemplatePreview = ({ boqData, template }) => {
 
           {/* Footer */}
           {template.footer_image_url ? (
-            <div className="w-full mt-8 px-8 flex-shrink-0">
+            <div className="w-full mt-8 flex-shrink-0">
               <img
                 src={`${BACKEND_URL}${template.footer_image_url}`}
                 alt="Company Footer"
-                className="w-full h-24 object-contain bg-gray-50 border-t"
-                style={{ maxHeight: "96px", minHeight: "96px" }}
+                className="w-full object-contain"
+                style={{ display: "block" }}
               />
             </div>
           ) : template.company_phone || template.company_email ? (
@@ -464,17 +464,15 @@ const BOQForm = () => {
     );
   }, [allCategories, topCategories, selectedCategoryName]);
 
-  // Products filtered by selected category + subcategory name.
-  // When subcategory is selected, show products matching that subcategory
-  // OR products with no subcategory set (they belong to the category generally).
+  // Strict dependent filtering:
+  // - No category selected → no products shown
+  // - Category selected, no subcategory → products matching that category
+  // - Category + subcategory selected → only products matching that exact subcategory
   const filteredProducts = React.useMemo(() => {
-    let result = products;
-    if (selectedCategoryName)
-      result = result.filter((p) => p.category === selectedCategoryName);
+    if (!selectedCategoryName) return [];
+    let result = products.filter((p) => p.category === selectedCategoryName);
     if (selectedSubcategoryName)
-      result = result.filter(
-        (p) => p.subcategory === selectedSubcategoryName || !p.subcategory
-      );
+      result = result.filter((p) => p.subcategory === selectedSubcategoryName);
     return result;
   }, [products, selectedCategoryName, selectedSubcategoryName]);
 
@@ -773,9 +771,12 @@ const BOQForm = () => {
     }
   }, [lead, isEdit]);
 
-  // Auto-populate from_data from default template when creating a new BOQ
+  // Auto-populate from_data from default template (new BOQ, or edit BOQ where from_data is empty)
   useEffect(() => {
-    if (!isEdit && boqTemplate) {
+    if (!boqTemplate) return;
+    setFormData((prev) => {
+      const isEmpty = !prev.from_data || Object.values(prev.from_data).every((v) => !v);
+      if (!isEmpty) return prev; // already has data, don't overwrite
       const fromData = {
         company_name: boqTemplate.company_name || "",
         address: boqTemplate.company_address || "",
@@ -784,12 +785,10 @@ const BOQForm = () => {
         website: boqTemplate.company_website || "",
         gst: boqTemplate.company_gst || "",
       };
-      // Only set if at least one field has a value
-      if (Object.values(fromData).some((v) => v)) {
-        setFormData((prev) => ({ ...prev, from_data: fromData }));
-      }
-    }
-  }, [isEdit, boqTemplate]);
+      if (!Object.values(fromData).some((v) => v)) return prev;
+      return { ...prev, from_data: fromData };
+    });
+  }, [boqTemplate]);
 
   const createMutation = useMutation({
     mutationFn: createBOQ,
@@ -1098,7 +1097,7 @@ const BOQForm = () => {
 
   if (isLoadingBOQ) {
     return (
-      <Layout>
+      <Layout sidebarCollapsed={true}>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
@@ -1133,7 +1132,10 @@ const BOQForm = () => {
                 </CardTitle>
                 {lead && (
                   <p className="text-sm text-gray-600">
-                    For: {lead.contact_name} - {lead.company}
+                    For:{" "}
+                    {formData.involvement_id && leadInvolvements
+                      ? leadInvolvements.find((inv) => inv.id === formData.involvement_id)?.entity_name || lead.company || lead.contact_name
+                      : lead.company || lead.contact_name}
                     {lead.project_name && (
                       <span className="ml-2 font-semibold">
                         | Project: {lead.project_name}
@@ -1322,8 +1324,10 @@ const BOQForm = () => {
                       <div>
                         <Label htmlFor="product">Product</Label>
                         <Popover
-                          open={productSearchOpen}
-                          onOpenChange={setProductSearchOpen}
+                          open={(selectedCategoryName && !(subCategories.length > 0 && !selectedSubcategoryName)) ? productSearchOpen : false}
+                          onOpenChange={(open) => {
+                            if (selectedCategoryName && !(subCategories.length > 0 && !selectedSubcategoryName)) setProductSearchOpen(open);
+                          }}
                         >
                           <PopoverTrigger asChild>
                             <Button
@@ -1332,9 +1336,14 @@ const BOQForm = () => {
                               aria-expanded={productSearchOpen}
                               className="w-full justify-between text-left font-normal"
                               data-testid="product-select"
+                              disabled={!selectedCategoryName || (subCategories.length > 0 && !selectedSubcategoryName)}
                             >
                               {productSearchValue
                                 ? productSearchValue
+                                : !selectedCategoryName
+                                ? "Select category first"
+                                : subCategories.length > 0 && !selectedSubcategoryName
+                                ? "Select subcategory first"
                                 : "Select product..."}
                               <ArrowLeft className="ml-2 h-4 w-4 shrink-0 opacity-50 rotate-90" />
                             </Button>

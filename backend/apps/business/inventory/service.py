@@ -156,20 +156,26 @@ class FactoryOrderService(BaseCRUDService):
         status: Optional[str] = None,
         search: Optional[str] = None,
         factory_name: Optional[str] = None,
+        sop_id: Optional[str] = None,
+        current_state_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """List factory orders with filters"""
         query: Dict[str, Any] = {}
-        
+
         if status:
             query["status"] = status
         if factory_name:
             query["factory_name"] = {"$regex": factory_name, "$options": "i"}
+        if sop_id:
+            query["sop_id"] = sop_id
+        if current_state_id:
+            query["current_state_id"] = current_state_id
         if search:
             query["$or"] = [
                 {"order_number": {"$regex": search, "$options": "i"}},
                 {"factory_name": {"$regex": search, "$options": "i"}},
             ]
-        
+
         return await self.list(
             query=query,
             page=page,
@@ -1201,10 +1207,12 @@ class RMAService(BaseCRUDService):
         entity_id: Optional[str] = None,
         assigned_to: Optional[str] = None,
         is_warranty: Optional[bool] = None,
+        sop_id: Optional[str] = None,
+        current_state_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """List RMA records"""
         query: Dict[str, Any] = {}
-        
+
         if status:
             query["status"] = status
         if entity_id:
@@ -1213,6 +1221,10 @@ class RMAService(BaseCRUDService):
             query["assigned_to"] = assigned_to
         if is_warranty is not None:
             query["is_warranty_claim"] = is_warranty
+        if sop_id:
+            query["sop_id"] = sop_id
+        if current_state_id:
+            query["current_state_id"] = current_state_id
         
         result = await self.list(
             query=query,

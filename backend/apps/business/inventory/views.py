@@ -116,9 +116,12 @@ async def list_factory_orders(
     status: Optional[str] = None,
     search: Optional[str] = None,
     factory_name: Optional[str] = None,
+    sop_id: Optional[str] = None,
+    current_state_id: Optional[str] = None,
 ):
     result = await factory_order_service.list_orders(
-        page=page, page_size=page_size, status=status, search=search, factory_name=factory_name,
+        page=page, page_size=page_size, status=status, search=search,
+        factory_name=factory_name, sop_id=sop_id, current_state_id=current_state_id,
     )
     result["items"] = [_factory_order_response(doc) for doc in result["items"]]
     return result
@@ -496,6 +499,8 @@ async def list_rmas(
     entity_id: Optional[str] = None,
     assigned_to: Optional[str] = None,
     is_warranty: Optional[bool] = None,
+    sop_id: Optional[str] = None,
+    current_state_id: Optional[str] = None,
 ):
     result = await rma_service.list_rmas(
         page=page,
@@ -504,6 +509,8 @@ async def list_rmas(
         entity_id=entity_id,
         assigned_to=assigned_to,
         is_warranty=is_warranty,
+        sop_id=sop_id,
+        current_state_id=current_state_id,
     )
     result["items"] = [_rma_response(doc) for doc in result["items"]]
     return result

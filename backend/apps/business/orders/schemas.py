@@ -102,79 +102,94 @@ class BOQResponse(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-# Sales Order Schemas
+# Sales Order (Proforma Invoice) Schemas
 class SalesOrderItemCreate(BaseModel):
-    product_id: str
-    product_name: str
-    quantity: int = Field(..., gt=0)
-    unit_price: Decimal = Field(..., gt=0)
-    delivery_date: Optional[datetime] = None
+    model_config = ConfigDict(extra="ignore")
+    product_id: str = ""
+    product_code: str = ""
+    product_name: str = ""
+    item_name: str = ""
+    description: str = ""
+    specifications: Any = None
+    quantity: int = Field(1, gt=0)
+    unit: str = ""
+    unit_price: float = 0
+    price: float = 0
+    percentage: float = 0
+    total_price: float = 0
 
 class SalesOrderItemResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     product_id: str = ""
+    product_code: str = ""
     product_name: str = ""
+    item_name: str = ""
+    description: str = ""
+    specifications: Any = None
     quantity: int = 0
-    unit_price: Decimal = Decimal("0")
-    total_price: Decimal = Decimal("0")
-    delivery_date: Optional[datetime] = None
+    unit: str = ""
+    unit_price: float = 0
+    price: float = 0
+    percentage: float = 0
+    total_price: float = 0
 
 class SalesOrderCreate(BaseModel):
-    order_number: str = Field(..., min_length=1, max_length=100)
+    model_config = ConfigDict(extra="ignore")
+    pi_number: Optional[str] = None
+    order_number: Optional[str] = None
     lead_id: Optional[str] = None
-    entity_id: str
+    entity_id: Optional[str] = None
     boq_id: Optional[str] = None
-    customer_po_number: Optional[str] = None
+    channel: str = "direct"
+    project_name: Optional[str] = None
+    status: str = "pending"
+    from_data: Dict[str, Any] = Field(default_factory=dict)
+    to_data: Dict[str, Any] = Field(default_factory=dict)
     items: List[SalesOrderItemCreate] = Field(default_factory=list)
-    currency: str = "USD"
-    priority: str = "normal"
-    expected_delivery_date: Optional[datetime] = None
-    billing_address: Optional[Dict[str, str]] = None
-    shipping_address: Optional[Dict[str, str]] = None
-    payment_terms: Optional[str] = None
-    delivery_terms: Optional[str] = None
+    subtotal: float = 0
+    tax_percentage: float = 0
+    tax_amount: float = 0
+    discount_amount: float = 0
+    total_amount: float = 0
+    currency: str = "INR"
     notes: Optional[str] = None
-    assigned_to: Optional[str] = None
 
 class SalesOrderUpdate(BaseModel):
-    customer_po_number: Optional[str] = None
-    items: Optional[List[SalesOrderItemCreate]] = None
-    currency: Optional[str] = None
+    model_config = ConfigDict(extra="ignore")
+    channel: Optional[str] = None
+    project_name: Optional[str] = None
     status: Optional[str] = None
-    priority: Optional[str] = None
-    expected_delivery_date: Optional[datetime] = None
-    actual_delivery_date: Optional[datetime] = None
-    billing_address: Optional[Dict[str, str]] = None
-    shipping_address: Optional[Dict[str, str]] = None
-    payment_terms: Optional[str] = None
-    delivery_terms: Optional[str] = None
+    from_data: Optional[Dict[str, Any]] = None
+    to_data: Optional[Dict[str, Any]] = None
+    items: Optional[List[SalesOrderItemCreate]] = None
+    tax_percentage: Optional[float] = None
+    discount_amount: Optional[float] = None
+    total_amount: Optional[float] = None
+    currency: Optional[str] = None
     notes: Optional[str] = None
-    assigned_to: Optional[str] = None
 
 class SalesOrderResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     id: str = ""
+    pi_number: str = ""
     order_number: str = ""
     lead_id: Optional[str] = None
-    entity_id: str = ""
+    entity_id: Optional[str] = None
     boq_id: Optional[str] = None
-    customer_po_number: Optional[str] = None
+    channel: str = "direct"
+    project_name: Optional[str] = None
+    status: str = "pending"
+    from_data: Dict[str, Any] = Field(default_factory=dict)
+    to_data: Dict[str, Any] = Field(default_factory=dict)
     items: List[SalesOrderItemResponse] = Field(default_factory=list)
-    subtotal: Decimal = Decimal("0")
-    tax_amount: Decimal = Decimal("0")
-    discount_amount: Decimal = Decimal("0")
-    total_amount: Decimal = Decimal("0")
-    currency: str = "USD"
-    status: str = "draft"
-    priority: str = "normal"
-    order_date: Optional[datetime] = None
-    expected_delivery_date: Optional[datetime] = None
-    actual_delivery_date: Optional[datetime] = None
-    billing_address: Optional[Dict[str, str]] = None
-    shipping_address: Optional[Dict[str, str]] = None
-    payment_terms: Optional[str] = None
-    delivery_terms: Optional[str] = None
+    subtotal: float = 0
+    tax_percentage: float = 0
+    tax_amount: float = 0
+    discount_amount: float = 0
+    total_amount: float = 0
+    currency: str = "INR"
     notes: Optional[str] = None
     created_by: str = ""
-    assigned_to: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

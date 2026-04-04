@@ -42,6 +42,8 @@ async def list_tickets(
     assigned_to: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    sop_id: Optional[str] = Query(None),
+    current_state_id: Optional[str] = Query(None),
     current_user=Depends(require_permission("support:view")),
 ):
     """List tickets with server-side pagination, search & filters."""
@@ -53,6 +55,8 @@ async def list_tickets(
         assigned_to=assigned_to,
         category=category,
         search=search,
+        sop_id=sop_id,
+        current_state_id=current_state_id,
     )
 
 

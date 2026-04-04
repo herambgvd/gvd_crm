@@ -152,15 +152,21 @@ class SalesOrderService(BaseCRUDService):
         super().__init__(collection_name="sales_orders")
 
     async def create_sales_order(self, data: Dict[str, Any], user_id: str) -> Dict[str, Any]:
-        """Create sales order with auto-calculated totals."""
+        """Create Proforma Invoice with auto-calculated totals."""
         items = data.get("items", [])
+        tax_pct = float(data.get("tax_percentage", 0) or 0)
         if items:
-            processed, subtotal, tax, discount, total = _calculate_totals(items)
+            processed, subtotal, tax, discount, total = _calculate_totals(items, tax_pct)
             data["items"] = processed
             data["subtotal"] = subtotal
             data["tax_amount"] = tax
             data["discount_amount"] = discount
             data["total_amount"] = total
+
+        # Auto-generate pi_number if not provided
+        if not data.get("pi_number"):
+            data["pi_number"] = f"PI-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
+        data["order_number"] = data.get("order_number") or data["pi_number"]
 
         data["status"] = data.get("status", "pending")
         data["order_date"] = data.get("order_date") or datetime.now(timezone.utc).isoformat()
@@ -187,7 +193,12 @@ class SalesOrderService(BaseCRUDService):
     async def update_sales_order(self, order_id: str, data: Dict[str, Any], user_id: str) -> Optional[Dict[str, Any]]:
         """Update sales order; recalculate totals if items change."""
         if "items" in data and data["items"]:
-            processed, subtotal, tax, discount, total = _calculate_totals(data["items"])
+            current = await self.get_by_id(order_id)
+            tax_pct = float(
+                data["tax_percentage"] if data.get("tax_percentage") is not None
+                else (current.get("tax_percentage", 0) if current else 0)
+            )
+            processed, subtotal, tax, discount, total = _calculate_totals(data["items"], tax_pct)
             data["items"] = processed
             data["subtotal"] = subtotal
             data["tax_amount"] = tax
@@ -200,6 +211,7 @@ class SalesOrderService(BaseCRUDService):
         page: int = 1,
         page_size: int = 20,
         status: Optional[str] = None,
+        lead_id: Optional[str] = None,
         entity_id: Optional[str] = None,
         assigned_to: Optional[str] = None,
         search: Optional[str] = None,
@@ -209,6 +221,8 @@ class SalesOrderService(BaseCRUDService):
         query: Dict[str, Any] = {}
         if status:
             query["status"] = status
+        if lead_id:
+            query["lead_id"] = lead_id
         if entity_id:
             query["entity_id"] = entity_id
         if assigned_to:

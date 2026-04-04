@@ -4,19 +4,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "../../../components";
 import {
   fetchTicket,
-  startTroubleshooting,
-  escalateTicket,
-  resolveTicket,
-  requestCustomerFeedback,
-  closeTicket,
   getTicketMetrics,
-  createIssueLogging,
-  createSystemEnvironment,
-  addTroubleshootingAction,
-  createEscalation,
-  createResolution,
-  createCustomerFeedback,
 } from "../api";
+import {
+  StateBadge,
+  TransitionActions,
+  TransitionTimeline,
+} from "../../workflow-engine";
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
 import {
@@ -33,21 +27,15 @@ import {
 } from "../../../components/ui/tabs";
 import {
   ArrowLeft,
-  Calendar,
-  User,
   Package,
   MapPin,
   Clock,
-  AlertTriangle,
-  CheckCircle,
-  MessageSquare,
-  X,
-  Wrench,
-  ArrowUpRight,
-  BarChart3,
   FileText,
   Settings,
-  UserCheck,
+  Wrench,
+  ArrowUpRight,
+  CheckCircle,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -74,95 +62,6 @@ const TicketDetail = () => {
     queryFn: () => getTicketMetrics(ticketId),
     enabled: !!ticketData?.ticket,
   });
-
-  const startTroubleshootingMutation = useMutation({
-    mutationFn: ({ ticketId, assignedTo }) =>
-      startTroubleshooting(ticketId, assignedTo),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["support-ticket", ticketId] });
-      toast.success("Troubleshooting started!");
-    },
-    onError: (error) => {
-      toast.error(
-        error.response?.data?.detail || "Failed to start troubleshooting",
-      );
-    },
-  });
-
-  const escalateMutation = useMutation({
-    mutationFn: escalateTicket,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["support-ticket", ticketId] });
-      toast.success("Ticket escalated!");
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.detail || "Failed to escalate ticket");
-    },
-  });
-
-  const resolveMutation = useMutation({
-    mutationFn: resolveTicket,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["support-ticket", ticketId] });
-      toast.success("Ticket marked as resolved!");
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.detail || "Failed to resolve ticket");
-    },
-  });
-
-  const requestFeedbackMutation = useMutation({
-    mutationFn: requestCustomerFeedback,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["support-ticket", ticketId] });
-      toast.success("Customer feedback requested!");
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.detail || "Failed to request feedback");
-    },
-  });
-
-  const closeTicketMutation = useMutation({
-    mutationFn: closeTicket,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["support-ticket", ticketId] });
-      toast.success("Ticket closed successfully!");
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.detail || "Failed to close ticket");
-    },
-  });
-
-  const handleStartTroubleshooting = () => {
-    const assignedTo = prompt("Assign to (enter username):");
-    if (assignedTo) {
-      startTroubleshootingMutation.mutate({ ticketId, assignedTo });
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    const variants = {
-      new: { class: "bg-blue-50 text-blue-700 ring-blue-600/20", icon: Clock },
-      troubleshooting: {
-        class: "bg-yellow-50 text-yellow-700 ring-yellow-600/20",
-        icon: Wrench,
-      },
-      escalated: {
-        class: "bg-red-50 text-red-700 ring-red-600/20",
-        icon: AlertTriangle,
-      },
-      resolved: {
-        class: "bg-green-50 text-green-700 ring-green-600/20",
-        icon: CheckCircle,
-      },
-      customer_feedback: {
-        class: "bg-purple-50 text-purple-700 ring-purple-600/20",
-        icon: MessageSquare,
-      },
-      closed: { class: "bg-gray-50 text-gray-700 ring-gray-600/20", icon: X },
-    };
-    return variants[status] || variants.new;
-  };
 
   const getPriorityBadge = (priority) => {
     const variants = {
@@ -201,8 +100,6 @@ const TicketDetail = () => {
   }
 
   const { ticket } = ticketData;
-  const statusInfo = getStatusBadge(ticket.status);
-  const StatusIcon = statusInfo.icon;
 
   return (
     <Layout>
@@ -225,55 +122,28 @@ const TicketDetail = () => {
               <p className="text-muted-foreground mt-1">
                 {ticket.customer_name} • {ticket.project_name}
               </p>
+              <div className="flex items-center gap-2 mt-2">
+                <StateBadge
+                  stateName={ticket.current_state_name}
+                  stateColor={null}
+                />
+                <Badge className={getPriorityBadge(ticket.priority)}>
+                  {ticket.priority}
+                </Badge>
+              </div>
             </div>
           </div>
 
-          {/* Status Actions */}
-          <div className="flex gap-2">
-            {ticket.status === "new" && (
-              <Button onClick={handleStartTroubleshooting}>
-                <Wrench className="h-4 w-4 mr-2" />
-                Start Troubleshooting
-              </Button>
-            )}
-
-            {ticket.status === "troubleshooting" && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => escalateMutation.mutate(ticketId)}
-                >
-                  <ArrowUpRight className="h-4 w-4 mr-2" />
-                  Escalate
-                </Button>
-                <Button onClick={() => resolveMutation.mutate(ticketId)}>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Resolve
-                </Button>
-              </>
-            )}
-
-            {ticket.status === "escalated" && (
-              <Button onClick={() => resolveMutation.mutate(ticketId)}>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Resolve
-              </Button>
-            )}
-
-            {ticket.status === "resolved" && (
-              <Button onClick={() => requestFeedbackMutation.mutate(ticketId)}>
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Request Feedback
-              </Button>
-            )}
-
-            {ticket.status === "customer_feedback" && (
-              <Button onClick={() => closeTicketMutation.mutate(ticketId)}>
-                <X className="h-4 w-4 mr-2" />
-                Close Ticket
-              </Button>
-            )}
-          </div>
+          {/* Workflow Transition Actions */}
+          {ticket.sop_id && (
+            <div className="ml-4">
+              <TransitionActions
+                recordType="ticket"
+                recordId={ticket.id}
+                invalidateKeys={[["support-ticket", ticketId], ["support-tickets"]]}
+              />
+            </div>
+          )}
         </div>
 
         {/* Ticket Overview */}
@@ -282,10 +152,10 @@ const TicketDetail = () => {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <StatusIcon className="h-5 w-5" />
-                <Badge className={statusInfo.class}>
-                  {ticket.status.replace("_", " ")}
-                </Badge>
+                <StateBadge
+                  stateName={ticket.current_state_name}
+                  stateColor={null}
+                />
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -398,8 +268,15 @@ const TicketDetail = () => {
         </div>
 
         {/* Ticket Lifecycle Tabs */}
-        <Tabs defaultValue="issue-logging" className="space-y-6">
-          <TabsList className="grid grid-cols-6 w-full">
+        <Tabs defaultValue="timeline" className="space-y-6">
+          <TabsList className="grid grid-cols-7 w-full">
+            <TabsTrigger
+              value="timeline"
+              className="flex items-center gap-2"
+            >
+              <Clock className="h-4 w-4" />
+              Timeline
+            </TabsTrigger>
             <TabsTrigger
               value="issue-logging"
               className="flex items-center gap-2"
@@ -431,6 +308,11 @@ const TicketDetail = () => {
               Feedback
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="timeline" className="space-y-4">
+            <h3 className="font-semibold text-lg">Workflow History</h3>
+            <TransitionTimeline recordType="ticket" recordId={ticketId} />
+          </TabsContent>
 
           <TabsContent value="issue-logging">
             <IssueLoggingTab

@@ -24,6 +24,8 @@ import {
 } from "../../../components/ui/select";
 import { ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
+import { SOPSelector } from "../../workflow-engine";
+import { assignSOP } from "../../workflow-engine/api";
 
 const ISSUE_CATEGORIES = [
   { value: "hardware_failure", label: "Hardware Failure" },
@@ -44,6 +46,7 @@ const INITIAL_FORM = {
   is_warranty_claim: false,
   notes: "",
   assigned_to: "",
+  sop_id: "",
 };
 
 const RMAForm = () => {
@@ -153,7 +156,22 @@ const RMAForm = () => {
   }, [isEdit, existingRecord, existingProduct, categories]);
 
   const mutation = useMutation({
-    mutationFn: (data) => (isEdit ? updateRma(id, data) : createRma(data)),
+    mutationFn: async (data) => {
+      if (isEdit) {
+        return updateRma(id, data);
+      }
+      const sopId = data.sop_id;
+      delete data.sop_id;
+
+      const rma = await createRma(data);
+
+      // Assign SOP to set initial state
+      if (sopId) {
+        await assignSOP("rma", rma.id, { sop_id: sopId });
+      }
+
+      return rma;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(["rmaRecords"]);
       if (isEdit) queryClient.invalidateQueries(["rmaDetail", id]);
@@ -199,6 +217,10 @@ const RMAForm = () => {
       notes: formData.notes || undefined,
       assigned_to: formData.assigned_to || undefined,
     };
+
+    if (!isEdit && formData.sop_id) {
+      basePayload.sop_id = formData.sop_id;
+    }
 
     mutation.mutate(basePayload);
   };
@@ -422,6 +444,17 @@ const RMAForm = () => {
                   rows={3}
                 />
               </div>
+
+              {/* SOP Selection (only for new RMAs) */}
+              {!isEdit && (
+                <div className="grid grid-cols-2 gap-4">
+                  <SOPSelector
+                    module="inventory"
+                    value={formData.sop_id}
+                    onChange={(val) => handleChange("sop_id", val)}
+                  />
+                </div>
+              )}
 
               {/* Submit */}
               <div className="flex justify-end gap-3 pt-2">

@@ -28,6 +28,8 @@ import {
 import { Plus, Trash2, ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
 import { getCurrencySymbol } from "../utils";
+import { SOPSelector } from "../../workflow-engine";
+import { assignSOP } from "../../workflow-engine/api";
 
 const FactoryOrderForm = () => {
   const navigate = useNavigate();
@@ -51,6 +53,7 @@ const FactoryOrderForm = () => {
     expected_delivery_date: "",
     payment_terms: "",
     notes: "",
+    sop_id: "",
   });
 
   // State for product selection with category/subcategory filters
@@ -159,7 +162,19 @@ const FactoryOrderForm = () => {
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: createFactoryOrder,
+    mutationFn: async (data) => {
+      const sopId = data.sop_id;
+      delete data.sop_id;
+
+      const order = await createFactoryOrder(data);
+
+      // Assign SOP to set initial state
+      if (sopId) {
+        await assignSOP("factory_order", order.id, { sop_id: sopId });
+      }
+
+      return order;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries(["factoryOrders"]);
       queryClient.invalidateQueries(["inventorySummary"]);
@@ -259,6 +274,7 @@ const FactoryOrderForm = () => {
     };
 
     if (isEdit) {
+      delete submitData.sop_id;
       updateMutation.mutate({ id, data: submitData });
     } else {
       createMutation.mutate(submitData);
@@ -725,6 +741,26 @@ const FactoryOrderForm = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* SOP Selection (only for new orders) */}
+          {!isEdit && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Workflow</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <SOPSelector
+                    module="inventory"
+                    value={formData.sop_id}
+                    onChange={(val) =>
+                      setFormData({ ...formData, sop_id: val })
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end gap-4">

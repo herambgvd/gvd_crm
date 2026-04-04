@@ -10,6 +10,9 @@ export const fetchFactoryOrders = async (params = {}) => {
   if (params.search) searchParams.append("search", params.search);
   if (params.factory_name)
     searchParams.append("factory_name", params.factory_name);
+  if (params.sop_id) searchParams.append("sop_id", params.sop_id);
+  if (params.current_state_id)
+    searchParams.append("current_state_id", params.current_state_id);
 
   const response = await axios.get(
     `${API}/inventory/factory-orders?${searchParams.toString()}`,
@@ -310,6 +313,9 @@ export const fetchRmaRecords = async (params = {}) => {
   if (params.assigned_to) searchParams.append("assigned_to", params.assigned_to);
   if (params.is_warranty !== undefined)
     searchParams.append("is_warranty", params.is_warranty);
+  if (params.sop_id) searchParams.append("sop_id", params.sop_id);
+  if (params.current_state_id)
+    searchParams.append("current_state_id", params.current_state_id);
 
   const response = await axios.get(
     `${API}/inventory/rma?${searchParams.toString()}`,

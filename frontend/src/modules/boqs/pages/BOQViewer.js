@@ -106,7 +106,8 @@ const BOQViewer = () => {
                         "http://localhost:8000"
                       }${boqTemplate.header_image_url}`}
                       alt="Company Header"
-                      className="w-full h-32 object-cover"
+                      className="w-full object-contain"
+                      style={{ display: "block" }}
                     />
                   </div>
                 ) : (
@@ -138,35 +139,48 @@ const BOQViewer = () => {
                   </div>
 
                   {/* From/To Section */}
-                  {(boq.from_data || boq.to_data) && (
+                  {(() => {
+                    const hasStoredFrom = boq.from_data && Object.values(boq.from_data).some(Boolean);
+                    const fromData = hasStoredFrom
+                      ? boq.from_data
+                      : boqTemplate
+                      ? {
+                          company_name: boqTemplate.company_name || "",
+                          address: boqTemplate.company_address || "",
+                          phone: boqTemplate.company_phone || "",
+                          email: boqTemplate.company_email || "",
+                          website: boqTemplate.company_website || "",
+                          gst: boqTemplate.company_gst || "",
+                        }
+                      : null;
+                    return (fromData || boq.to_data) ? (
                     <div className="grid grid-cols-2 gap-8 mt-6 mb-6">
                       {/* From Section */}
-                      {boq.from_data &&
-                        Object.keys(boq.from_data).length > 0 && (
+                      {fromData && Object.values(fromData).some(Boolean) && (
                           <div>
                             <h3 className="text-sm font-semibold text-gray-800 mb-3 border-b pb-1">
                               FROM:
                             </h3>
                             <div className="text-sm text-gray-700 space-y-1">
-                              {boq.from_data.company_name && (
+                              {fromData.company_name && (
                                 <p className="font-semibold">
-                                  {boq.from_data.company_name}
+                                  {fromData.company_name}
                                 </p>
                               )}
-                              {boq.from_data.address && (
-                                <p>{boq.from_data.address}</p>
+                              {fromData.address && (
+                                <p>{fromData.address}</p>
                               )}
-                              {boq.from_data.phone && (
-                                <p>Phone: {boq.from_data.phone}</p>
+                              {fromData.phone && (
+                                <p>Phone: {fromData.phone}</p>
                               )}
-                              {boq.from_data.email && (
-                                <p>Email: {boq.from_data.email}</p>
+                              {fromData.email && (
+                                <p>Email: {fromData.email}</p>
                               )}
-                              {boq.from_data.website && (
-                                <p>Website: {boq.from_data.website}</p>
+                              {fromData.website && (
+                                <p>Website: {fromData.website}</p>
                               )}
-                              {boq.from_data.gst && (
-                                <p>GST: {boq.from_data.gst}</p>
+                              {fromData.gst && (
+                                <p>GST: {fromData.gst}</p>
                               )}
                             </div>
                           </div>
@@ -198,7 +212,7 @@ const BOQViewer = () => {
                         </div>
                       )}
                     </div>
-                  )}
+                  ) : null; })()}
                 </div>
               </div>
 

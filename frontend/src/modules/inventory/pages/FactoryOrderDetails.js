@@ -12,8 +12,11 @@ import {
 import { Button } from "../../../components/ui/button";
 import { ArrowLeft, Edit, Printer } from "lucide-react";
 import { formatDate, formatCurrency } from "../utils";
-import { StatusBadge } from "../components";
-import { FACTORY_ORDER_STATUS } from "../constants";
+import {
+  StateBadge,
+  TransitionActions,
+  TransitionTimeline,
+} from "../../workflow-engine";
 
 const FactoryOrderDetails = () => {
   const navigate = useNavigate();
@@ -71,17 +74,22 @@ const FactoryOrderDetails = () => {
               <p className="text-muted-foreground">Factory Order Details</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            {order.status === "draft" && (
-              <Button
-                onClick={() =>
-                  navigate(`/stock-management/factory-orders/${id}/edit`)
-                }
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Order
-              </Button>
+          <div className="flex gap-2 items-center">
+            {order.sop_id && (
+              <TransitionActions
+                recordType="factory_order"
+                recordId={order.id}
+                invalidateKeys={[["factoryOrder", id], ["factoryOrders"]]}
+              />
             )}
+            <Button
+              onClick={() =>
+                navigate(`/stock-management/factory-orders/${id}/edit`)
+              }
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Order
+            </Button>
             <Button variant="outline" onClick={() => window.print()}>
               <Printer className="h-4 w-4 mr-2" />
               Print
@@ -95,10 +103,9 @@ const FactoryOrderDetails = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>
-                <StatusBadge
-                  status={order.status}
-                  statusMap={FACTORY_ORDER_STATUS}
-                />
+                <div className="flex items-center gap-2 mt-1">
+                  <StateBadge stateName={order.current_state_name} stateColor={null} />
+                </div>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Order Date</p>
@@ -266,6 +273,16 @@ const FactoryOrderDetails = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Workflow Timeline */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Workflow History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TransitionTimeline recordType="factory_order" recordId={id} />
+          </CardContent>
+        </Card>
 
         {/* Audit Info */}
         {(order.created_at || order.created_by_name) && (

@@ -4,13 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Layout } from "../../../components";
 import {
   fetchTickets,
-  fetchTicketStats,
-  startTroubleshooting,
-  escalateTicket,
-  resolveTicket,
   deleteTicket,
 } from "../api";
-import { fetchUsers } from "../../settings/api";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Badge } from "../../../components/ui/badge";
@@ -26,15 +21,8 @@ import {
 import {
   Plus,
   Eye,
-  AlertTriangle,
-  Clock,
-  CheckCircle,
-  MessageSquare,
-  X,
   Search,
   Trash2,
-  ArrowUpRight,
-  Wrench,
   ChevronLeft,
   ChevronRight,
   TicketIcon,
@@ -51,13 +39,10 @@ import {
   AlertDialogTitle,
 } from "../../../components/ui/alert-dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../../../components/ui/dialog";
+  StateBadge,
+  StateStatsBar,
+  TransitionActions,
+} from "../../workflow-engine";
 
 const SupportTickets = () => {
   const navigate = useNavigate();
@@ -65,12 +50,10 @@ const SupportTickets = () => {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [ticketToDelete, setTicketToDelete] = useState(null);
-  const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const [ticketToAssign, setTicketToAssign] = useState(null);
-  const [selectedUser, setSelectedUser] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [stateFilter, setStateFilter] = useState(null);
+  const [selectedSopId, setSelectedSopId] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
@@ -85,10 +68,15 @@ const SupportTickets = () => {
   }, [searchInput]);
 
   // Reset page on filter change
-  const handleStatusChange = useCallback((v) => {
-    setStatusFilter(v);
+  useEffect(() => {
     setCurrentPage(1);
+  }, [searchQuery, stateFilter, selectedSopId, priorityFilter]);
+
+  const handleSopChange = useCallback((sopId) => {
+    setSelectedSopId(sopId);
+    setStateFilter(null);
   }, []);
+
   const handlePriorityChange = useCallback((v) => {
     setPriorityFilter(v);
     setCurrentPage(1);
@@ -100,7 +88,8 @@ const SupportTickets = () => {
       "support-tickets",
       currentPage,
       pageSize,
-      statusFilter,
+      stateFilter,
+      selectedSopId,
       priorityFilter,
       searchQuery,
     ],
@@ -108,7 +97,8 @@ const SupportTickets = () => {
       fetchTickets({
         page: currentPage,
         page_size: pageSize,
-        status: statusFilter !== "all" ? statusFilter : undefined,
+        sop_id: selectedSopId || undefined,
+        current_state_id: stateFilter || undefined,
         priority: priorityFilter !== "all" ? priorityFilter : undefined,
         search: searchQuery || undefined,
       }),
@@ -118,59 +108,7 @@ const SupportTickets = () => {
   const totalPages = ticketData?.total_pages || 0;
   const totalTickets = ticketData?.total || 0;
 
-  const { data: stats } = useQuery({
-    queryKey: ["support-ticket-stats"],
-    queryFn: fetchTicketStats,
-  });
-
-  const { data: users } = useQuery({
-    queryKey: ["users"],
-    queryFn: fetchUsers,
-  });
-
   // ── Mutations ──
-  const startTroubleshootingMutation = useMutation({
-    mutationFn: ({ ticketId, assignedTo }) =>
-      startTroubleshooting(ticketId, assignedTo),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["support-tickets"] });
-      queryClient.invalidateQueries({ queryKey: ["support-ticket-stats"] });
-      toast.success("Troubleshooting started successfully!");
-      setAssignModalOpen(false);
-      setTicketToAssign(null);
-      setSelectedUser("");
-    },
-    onError: (error) => {
-      const msg =
-        typeof error.response?.data?.detail === "string"
-          ? error.response.data.detail
-          : error.message || "Failed to start troubleshooting";
-      toast.error(msg);
-    },
-  });
-
-  const escalateMutation = useMutation({
-    mutationFn: escalateTicket,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["support-tickets"] });
-      queryClient.invalidateQueries({ queryKey: ["support-ticket-stats"] });
-      toast.success("Ticket escalated!");
-    },
-    onError: (error) =>
-      toast.error(error.response?.data?.detail || "Failed to escalate"),
-  });
-
-  const resolveMutation = useMutation({
-    mutationFn: resolveTicket,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["support-tickets"] });
-      queryClient.invalidateQueries({ queryKey: ["support-ticket-stats"] });
-      toast.success("Ticket resolved!");
-    },
-    onError: (error) =>
-      toast.error(error.response?.data?.detail || "Failed to resolve"),
-  });
-
   const deleteMutation = useMutation({
     mutationFn: deleteTicket,
     onSuccess: () => {
@@ -194,40 +132,8 @@ const SupportTickets = () => {
   const confirmDelete = () => {
     if (ticketToDelete) deleteMutation.mutate(ticketToDelete.id);
   };
-  const handleStartTroubleshooting = (ticket) => {
-    setTicketToAssign(ticket);
-    setAssignModalOpen(true);
-  };
-  const handleAssignUser = () => {
-    if (ticketToAssign && selectedUser) {
-      startTroubleshootingMutation.mutate({
-        ticketId: ticketToAssign.id,
-        assignedTo: selectedUser,
-      });
-    }
-  };
 
   // ── Style helpers ──
-  const getStatusBadge = (status) =>
-    ({
-      new: "bg-blue-50 text-blue-700 ring-blue-600/20",
-      troubleshooting: "bg-yellow-50 text-yellow-700 ring-yellow-600/20",
-      escalated: "bg-red-50 text-red-700 ring-red-600/20",
-      resolved: "bg-green-50 text-green-700 ring-green-600/20",
-      customer_feedback: "bg-purple-50 text-purple-700 ring-purple-600/20",
-      closed: "bg-gray-50 text-gray-700 ring-gray-600/20",
-    })[status] || "bg-blue-50 text-blue-700 ring-blue-600/20";
-
-  const getStatusIcon = (status) =>
-    ({
-      new: Clock,
-      troubleshooting: Wrench,
-      escalated: AlertTriangle,
-      resolved: CheckCircle,
-      customer_feedback: MessageSquare,
-      closed: X,
-    })[status] || Clock;
-
   const getPriorityBadge = (priority) =>
     ({
       Low: "bg-slate-50 text-slate-700 ring-slate-600/20",
@@ -265,40 +171,14 @@ const SupportTickets = () => {
           </Button>
         </div>
 
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[
-              { label: "Total", value: stats.total, color: "text-gray-900" },
-              { label: "Open", value: stats.open, color: "text-blue-600" },
-              {
-                label: "In Progress",
-                value: stats.in_progress,
-                color: "text-yellow-600",
-              },
-              {
-                label: "Escalated",
-                value: stats.escalated,
-                color: "text-red-600",
-              },
-              {
-                label: "Resolved",
-                value: stats.resolved,
-                color: "text-green-600",
-              },
-              { label: "Closed", value: stats.closed, color: "text-gray-500" },
-            ].map(({ label, value, color }) => (
-              <Card key={label}>
-                <CardContent className="p-4 text-center">
-                  <p className="text-xs text-muted-foreground font-medium">
-                    {label}
-                  </p>
-                  <p className={`text-2xl font-bold ${color}`}>{value ?? 0}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        {/* Dynamic Stats Cards from Workflow Engine */}
+        <StateStatsBar
+          module="support"
+          selectedSopId={selectedSopId}
+          onSopChange={handleSopChange}
+          onStateFilter={setStateFilter}
+          activeStateFilter={stateFilter}
+        />
 
         {/* Filters */}
         <Card>
@@ -314,26 +194,6 @@ const SupportTickets = () => {
                     className="pl-9"
                   />
                 </div>
-              </div>
-              <div className="w-full md:w-48">
-                <Select value={statusFilter} onValueChange={handleStatusChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="new">New</SelectItem>
-                    <SelectItem value="troubleshooting">
-                      Troubleshooting
-                    </SelectItem>
-                    <SelectItem value="escalated">Escalated</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="customer_feedback">
-                      Customer Feedback
-                    </SelectItem>
-                    <SelectItem value="closed">Closed</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div className="w-full md:w-48">
                 <Select
@@ -358,9 +218,7 @@ const SupportTickets = () => {
 
         {/* Tickets Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tickets.map((ticket) => {
-            const StatusIcon = getStatusIcon(ticket.status);
-            return (
+          {tickets.map((ticket) => (
               <Card
                 key={ticket.id}
                 className="hover:shadow-md transition-shadow"
@@ -381,10 +239,10 @@ const SupportTickets = () => {
                   </div>
 
                   <div className="flex items-center gap-2 mb-4">
-                    <StatusIcon className="h-4 w-4" />
-                    <Badge className={getStatusBadge(ticket.status)}>
-                      {(ticket.status || "new").replace("_", " ")}
-                    </Badge>
+                    <StateBadge
+                      stateName={ticket.current_state_name}
+                      stateColor={null}
+                    />
                   </div>
 
                   <div className="space-y-2 text-sm mb-4">
@@ -429,43 +287,6 @@ const SupportTickets = () => {
                     >
                       <Eye className="h-4 w-4 mr-1" /> View
                     </Button>
-
-                    {ticket.status === "new" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleStartTroubleshooting(ticket)}
-                      >
-                        <Wrench className="h-4 w-4 mr-1" /> Start
-                      </Button>
-                    )}
-                    {ticket.status === "troubleshooting" && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => escalateMutation.mutate(ticket.id)}
-                        >
-                          <ArrowUpRight className="h-4 w-4 mr-1" /> Escalate
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => resolveMutation.mutate(ticket.id)}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" /> Resolve
-                        </Button>
-                      </>
-                    )}
-                    {ticket.status === "escalated" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => resolveMutation.mutate(ticket.id)}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-1" /> Resolve
-                      </Button>
-                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -475,10 +296,20 @@ const SupportTickets = () => {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
+
+                  {/* Workflow Transition Actions */}
+                  {ticket.sop_id && (
+                    <div className="pt-3 border-t mt-3">
+                      <TransitionActions
+                        recordType="ticket"
+                        recordId={ticket.id}
+                        invalidateKeys={[["support-tickets"]]}
+                      />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            );
-          })}
+            ))}
         </div>
 
         {tickets.length === 0 && (
@@ -488,7 +319,7 @@ const SupportTickets = () => {
             </div>
             <h3 className="text-lg font-medium mb-2">No tickets found</h3>
             <p className="text-muted-foreground">
-              {searchQuery || statusFilter !== "all" || priorityFilter !== "all"
+              {searchQuery || stateFilter || priorityFilter !== "all"
                 ? "Try adjusting your search or filters"
                 : "Create your first support ticket to get started"}
             </p>
@@ -521,72 +352,6 @@ const SupportTickets = () => {
             </div>
           </div>
         )}
-
-        {/* Assignment Modal */}
-        <Dialog open={assignModalOpen} onOpenChange={setAssignModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Assign Ticket for Troubleshooting</DialogTitle>
-              <DialogDescription>
-                Select a user to assign ticket {ticketToAssign?.ticket_number}{" "}
-                for troubleshooting.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="user-select">Assign to User</Label>
-                <Select value={selectedUser} onValueChange={setSelectedUser}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a user..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Array.isArray(users) ? users : users?.items || []).map(
-                      (user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name || user.username} ({user.email})
-                        </SelectItem>
-                      ),
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              {ticketToAssign && (
-                <div className="bg-muted/50 p-3 rounded-md text-sm space-y-1">
-                  <div>
-                    <strong>Ticket:</strong> {ticketToAssign.ticket_number}
-                  </div>
-                  <div>
-                    <strong>Customer:</strong> {ticketToAssign.customer_name}
-                  </div>
-                  <div>
-                    <strong>Priority:</strong> {ticketToAssign.priority}
-                  </div>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setAssignModalOpen(false);
-                  setSelectedUser("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAssignUser}
-                disabled={
-                  !selectedUser || startTroubleshootingMutation.isPending
-                }
-              >
-                {startTroubleshootingMutation.isPending
-                  ? "Assigning..."
-                  : "Assign & Start"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
         {/* Delete Confirmation */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

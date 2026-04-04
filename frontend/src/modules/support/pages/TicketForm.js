@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "../../../components";
 import { createTicket } from "../api";
+import { SOPSelector } from "../../workflow-engine";
+import { assignSOP } from "../../workflow-engine/api";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
@@ -38,14 +40,28 @@ const TicketForm = () => {
     location_site: "",
     priority: "Medium",
     sla_category: "No SLA",
+    sop_id: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const createMutation = useMutation({
-    mutationFn: createTicket,
+    mutationFn: async (data) => {
+      const sopId = data.sop_id;
+      delete data.sop_id;
+
+      const ticket = await createTicket(data);
+
+      // Assign SOP to set initial state
+      if (sopId) {
+        await assignSOP("ticket", ticket.id, { sop_id: sopId });
+      }
+
+      return ticket;
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["support-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["workflow-stats"] });
       toast.success("Ticket created successfully!");
       navigate(`/support/tickets/${data.id}`);
     },
@@ -112,6 +128,23 @@ const TicketForm = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* SOP Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Workflow</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <SOPSelector
+                  module="support"
+                  value={formData.sop_id}
+                  onChange={(val) => handleChange("sop_id", val)}
+                  label="Select Workflow (SOP) *"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Ticket Details */}
           <Card>
             <CardHeader>

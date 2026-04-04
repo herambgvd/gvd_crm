@@ -45,6 +45,8 @@ class TicketService(BaseCRUDService):
         assigned_to: Optional[str] = None,
         category: Optional[str] = None,
         search: Optional[str] = None,
+        sop_id: Optional[str] = None,
+        current_state_id: Optional[str] = None,
         sort_by: str = "created_at",
         sort_order: int = -1,
     ) -> Dict[str, Any]:
@@ -59,6 +61,10 @@ class TicketService(BaseCRUDService):
             query["assigned_to"] = assigned_to
         if category:
             query["category"] = category
+        if sop_id:
+            query["sop_id"] = sop_id
+        if current_state_id:
+            query["current_state_id"] = current_state_id
         if search:
             query["$or"] = [
                 {"title": {"$regex": search, "$options": "i"}},
