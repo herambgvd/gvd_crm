@@ -98,6 +98,9 @@ class BOQResponse(BaseModel):
     status: str = "draft"
     notes: Optional[str] = None
     terms_conditions: Optional[str] = None
+    sop_id: Optional[str] = None
+    current_state_id: Optional[str] = None
+    current_state_name: Optional[str] = None
     created_by: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -189,6 +192,9 @@ class SalesOrderResponse(BaseModel):
     total_amount: float = 0
     currency: str = "INR"
     notes: Optional[str] = None
+    sop_id: Optional[str] = None
+    current_state_id: Optional[str] = None
+    current_state_name: Optional[str] = None
     created_by: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -248,6 +254,9 @@ class PurchaseOrderResponse(BaseModel):
     delivery_address: Optional[Dict[str, str]] = None
     payment_terms: Optional[str] = None
     notes: Optional[str] = None
+    sop_id: Optional[str] = None
+    current_state_id: Optional[str] = None
+    current_state_name: Optional[str] = None
     created_by: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

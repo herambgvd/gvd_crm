@@ -82,6 +82,12 @@ class TicketResponse(BaseModel):
     resolution: Optional[str] = None
     resolution_date: Optional[datetime] = None
     due_date: Optional[datetime] = None
+    # SOP workflow fields
+    sop_id: Optional[str] = None
+    sop_version: Optional[int] = None
+    current_state_id: Optional[str] = None
+    current_state_name: Optional[str] = None
+
     created_by: str = ""
     created_by_name: Optional[str] = None
     created_at: Optional[datetime] = None

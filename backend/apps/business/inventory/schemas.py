@@ -97,6 +97,10 @@ class FactoryOrderResponse(BaseModel):
     payment_terms: Optional[str] = None
     notes: Optional[str] = None
     forecast_id: Optional[str] = None
+    sop_id: Optional[str] = None
+    sop_version: Optional[int] = None
+    current_state_id: Optional[str] = None
+    current_state_name: Optional[str] = None
     created_by: str = ""
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -375,6 +379,10 @@ class RMAResponse(BaseModel):
     created_by_name: Optional[str] = None
     assigned_to: Optional[str] = None
     assigned_to_name: Optional[str] = None
+    sop_id: Optional[str] = None
+    sop_version: Optional[int] = None
+    current_state_id: Optional[str] = None
+    current_state_name: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

@@ -63,6 +63,12 @@ class LeadResponse(BaseModel):
     expected_close_date: Optional[datetime] = None
     notes: Optional[str] = None
     additional_information: Optional[Dict[str, str]] = None
+    # SOP workflow fields
+    sop_id: Optional[str] = None
+    sop_version: Optional[int] = None
+    current_state_id: Optional[str] = None
+    current_state_name: Optional[str] = None
+
     created_by: Optional[str] = None
     assigned_to: Optional[str] = None
     created_at: Optional[datetime] = None
