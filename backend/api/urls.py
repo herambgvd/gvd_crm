@@ -9,6 +9,7 @@ from apps.business.finance.views import router as finance_router
 from apps.business.workflow.views import router as workflow_router
 from apps.business.inventory.views import router as inventory_router
 from apps.business.warehouse.views import router as warehouse_router
+from apps.workflow_engine.views import router as workflow_engine_router
 from apps.support.views import router as support_router
 from apps.support.ticket_views import router as ticket_lifecycle_router
 
@@ -115,3 +116,6 @@ api_router.include_router(warranty_router, prefix="/warranties", tags=["Warranti
 # Inventory Management
 api_router.include_router(inventory_router, prefix="/inventory", tags=["Inventory Management"])
 api_router.include_router(warehouse_router, prefix="/warehouses", tags=["Warehouses"])
+
+# Workflow Engine (SOP Builder)
+api_router.include_router(workflow_engine_router, prefix="/workflow-engine", tags=["Workflow Engine"])

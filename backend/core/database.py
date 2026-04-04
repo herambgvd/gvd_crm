@@ -231,6 +231,15 @@ class DatabaseManager:
             await self.database.grn_records.create_index("in_transit_id")
             await self.database.grn_records.create_index([("created_at", -1)])
             
+            # ─── Workflow Engine (SOP) Indexes ───
+            await self.database.sop_workflows.create_index([("module", 1), ("is_active", 1)])
+            await self.database.sop_workflows.create_index("id", unique=True)
+            await self.database.sop_workflows.create_index([("created_at", -1)])
+
+            await self.database.transition_logs.create_index([("record_id", 1), ("performed_at", -1)])
+            await self.database.transition_logs.create_index([("sop_id", 1), ("performed_at", -1)])
+            await self.database.transition_logs.create_index([("module", 1), ("performed_at", -1)])
+
             logger.info("Database indexes created successfully")
             
         except Exception as e:

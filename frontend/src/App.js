@@ -59,6 +59,7 @@ import {
   RMAForm,
 } from "./modules/inventory";
 import { Warehouses } from "./modules/warehouse";
+import { SOPList, SOPBuilder } from "./modules/workflow-engine";
 
 // ─── Query Client ──────────────────────────────
 const queryClient = new QueryClient({
@@ -582,6 +583,32 @@ function App() {
               element={
                 <P>
                   <Config />
+                </P>
+              }
+            />
+
+            {/* Workflow Engine (SOP Builder) */}
+            <Route
+              path="/settings/workflows"
+              element={
+                <P>
+                  <SOPList />
+                </P>
+              }
+            />
+            <Route
+              path="/settings/workflows/new"
+              element={
+                <P>
+                  <SOPBuilder />
+                </P>
+              }
+            />
+            <Route
+              path="/settings/workflows/:id/edit"
+              element={
+                <P>
+                  <SOPBuilder />
                 </P>
               }
             />

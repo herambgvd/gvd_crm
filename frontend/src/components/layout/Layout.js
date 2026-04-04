@@ -35,12 +35,12 @@ import {
   markAllNotificationsRead,
 } from "../../lib/notificationsApi";
 
-const Layout = ({ children }) => {
+const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(defaultCollapsed);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [salesMenuOpen, setSalesMenuOpen] = useState(false);
   const [supportMenuOpen, setSupportMenuOpen] = useState(false);
@@ -183,6 +183,7 @@ const Layout = ({ children }) => {
     { name: "Roles", href: "/settings/roles", icon: UserCog },
     { name: "Teams", href: "/settings/teams", icon: Users },
     { name: "Templates", href: "/settings/templates", icon: LayoutIcon },
+    { name: "Workflows", href: "/settings/workflows", icon: GitBranch },
     { name: "Config", href: "/settings/config", icon: Settings },
   ];
 

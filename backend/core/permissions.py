@@ -94,6 +94,11 @@ DEFAULT_PERMISSIONS = [
     {"name": "Edit Support", "codename": "support:edit", "resource": "support", "action": "edit"},
     {"name": "Delete Support", "codename": "support:delete", "resource": "support", "action": "delete"},
     {"name": "Escalate Support", "codename": "support:escalate", "resource": "support", "action": "escalate"},
+    # Workflows (SOP Builder)
+    {"name": "View Workflows", "codename": "workflows:view", "resource": "workflows", "action": "view"},
+    {"name": "Create Workflows", "codename": "workflows:create", "resource": "workflows", "action": "create"},
+    {"name": "Edit Workflows", "codename": "workflows:edit", "resource": "workflows", "action": "edit"},
+    {"name": "Delete Workflows", "codename": "workflows:delete", "resource": "workflows", "action": "delete"},
 ]
 
 # Default roles with their permission codenames
