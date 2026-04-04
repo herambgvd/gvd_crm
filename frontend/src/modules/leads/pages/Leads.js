@@ -213,7 +213,7 @@ const Leads = () => {
             <Card className="col-span-full">
               <CardContent className="py-12 text-center">
                 <p className="text-gray-500">
-                  {debouncedSearch || statusFilter !== "all" || priorityFilter !== "all"
+                  {debouncedSearch || stateFilter
                     ? "No leads match your filters."
                     : "No leads found. Create your first lead!"}
                 </p>

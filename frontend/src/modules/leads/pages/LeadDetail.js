@@ -831,9 +831,9 @@ const LeadDetail = () => {
 
   return (
     <Layout>
-      <div className="space-y-4" data-testid="lead-detail-page">
+      <div data-testid="lead-detail-page">
         {/* Top bar */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-3">
           <Button variant="ghost" size="sm" onClick={() => navigate("/leads")}>
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
             Leads
@@ -843,110 +843,138 @@ const LeadDetail = () => {
           </Button>
         </div>
 
-        {/* Header row: name + state + actions */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-lg font-semibold tracking-tight truncate">
-              {lead.project_name || "Untitled Project"}
-            </h1>
-            {lead.customer_name && (
-              <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                <Building className="h-3.5 w-3.5" />
-                {lead.customer_name}
-              </p>
-            )}
-            <div className="flex items-center gap-2 mt-2">
-              <StateBadge stateName={lead.current_state_name} stateColor={null} />
-              <Badge variant="outline" className="capitalize text-xs">{lead.priority}</Badge>
-              {lead.source && (
-                <Badge variant="secondary" className="text-xs">{lead.source}</Badge>
-              )}
-            </div>
-          </div>
-          {lead.sop_id && (
-            <TransitionActions
-              recordType="lead"
-              recordId={lead.id}
-              invalidateKeys={[["lead", id], ["leads"]]}
-            />
-          )}
-        </div>
-
-        {/* Key info grid */}
-        <Card className="border-border/60">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <InfoItem label="Expected Value">
-                {lead.expected_value && (
-                  <span className="text-green-600">
-                    ₹{Number(lead.expected_value).toLocaleString("en-IN")}
-                  </span>
-                )}
-              </InfoItem>
-              <InfoItem label="Expected Close">
-                {lead.expected_close_date &&
-                  new Date(lead.expected_close_date).toLocaleDateString("en-IN")}
-              </InfoItem>
-              <InfoItem label="Consultant">
-                {consultants.length > 0 &&
-                  consultants.map((c) => c.entity_name || c.entity_id).join(", ")}
-              </InfoItem>
-              <InfoItem label="Bidders">
-                {bidders.length > 0 &&
-                  bidders.map((b) => b.entity_name || b.entity_id).join(", ")}
-              </InfoItem>
-            </div>
-            {lead.notes && (
-              <div className="mt-3 pt-3 border-t border-border/40">
-                <p className="text-xs text-muted-foreground">Notes</p>
-                <p className="text-sm mt-0.5">{lead.notes}</p>
-              </div>
-            )}
-            {lead.additional_information &&
-              typeof lead.additional_information === "object" &&
-              Object.keys(lead.additional_information).length > 0 && (
-                <div className="mt-3 pt-3 border-t border-border/40">
-                  <p className="text-xs text-muted-foreground mb-1.5">Additional Info</p>
-                  <div className="flex flex-wrap gap-x-6 gap-y-1">
-                    {Object.entries(lead.additional_information).map(([key, value]) => (
-                      <span key={key} className="text-sm">
-                        <span className="text-muted-foreground">{key}:</span>{" "}
-                        <span className="font-medium">{value}</span>
-                      </span>
-                    ))}
-                  </div>
+        {/* 30:70 split layout */}
+        <div className="grid grid-cols-[300px_1fr] gap-4 items-start">
+          {/* ── LEFT SIDEBAR (30%) ── */}
+          <div className="space-y-3 sticky top-4">
+            {/* Lead header */}
+            <Card className="border-border/60">
+              <CardContent className="p-4 space-y-3">
+                <div>
+                  <h1 className="text-base font-semibold tracking-tight leading-snug">
+                    {lead.project_name || "Untitled Project"}
+                  </h1>
+                  {lead.customer_name && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                      <Building className="h-3 w-3" />
+                      {lead.customer_name}
+                    </p>
+                  )}
                 </div>
-              )}
-          </CardContent>
-        </Card>
 
-        {/* Tabs */}
-        <Card className="border-border/60">
-          <CardContent className="pt-4">
-            <Tabs defaultValue="timeline" className="w-full" onValueChange={setActiveTab}>
-              <TabsList className="w-full flex overflow-x-auto h-auto p-0.5 gap-0.5">
-                <TabsTrigger value="timeline" className="text-[11px] py-1.5 px-2.5">
-                  Timeline
-                </TabsTrigger>
-                <TabsTrigger value="boqs" className="text-[11px] py-1.5 px-2.5">
-                  BOQs ({boqs.length})
-                </TabsTrigger>
-                <TabsTrigger value="orders" className="text-[11px] py-1.5 px-2.5">
-                  PI ({salesOrders.length})
-                </TabsTrigger>
-                <TabsTrigger value="invoices" className="text-[11px] py-1.5 px-2.5">
-                  PO ({purchaseOrders.length})
-                </TabsTrigger>
-                <TabsTrigger value="payments" className="text-[11px] py-1.5 px-2.5">
-                  Payments ({payments.length})
-                </TabsTrigger>
-                <TabsTrigger value="warranties" className="text-[11px] py-1.5 px-2.5">
-                  Warranties ({warranties.length})
-                </TabsTrigger>
-                <TabsTrigger value="involvement" className="text-[11px] py-1.5 px-2.5">
-                  Involvement ({involvements?.length || 0})
-                </TabsTrigger>
-                <TabsTrigger value="remarks" className="text-[11px] py-1.5 px-2.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <StateBadge stateName={lead.current_state_name} stateColor={null} />
+                  <Badge variant="outline" className="capitalize text-[10px] h-5">{lead.priority}</Badge>
+                  {lead.source && (
+                    <Badge variant="secondary" className="text-[10px] h-5">{lead.source}</Badge>
+                  )}
+                </div>
+
+                {/* Transition actions */}
+                {lead.sop_id && (
+                  <div className="pt-2 border-t border-border/40">
+                    <TransitionActions
+                      recordType="lead"
+                      recordId={lead.id}
+                      invalidateKeys={[["lead", id], ["leads"]]}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Key details */}
+            <Card className="border-border/60">
+              <CardContent className="p-4 space-y-2.5">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Details</p>
+                {lead.expected_value && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Value</span>
+                    <span className="font-semibold text-green-600">
+                      ₹{Number(lead.expected_value).toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                )}
+                {lead.expected_close_date && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Close Date</span>
+                    <span className="font-medium">
+                      {new Date(lead.expected_close_date).toLocaleDateString("en-IN")}
+                    </span>
+                  </div>
+                )}
+                {lead.source && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Source</span>
+                    <span className="font-medium">{lead.source}</span>
+                  </div>
+                )}
+                {consultants.length > 0 && (
+                  <div className="text-sm pt-1 border-t border-border/40">
+                    <span className="text-muted-foreground text-xs">Consultant</span>
+                    <p className="font-medium text-xs mt-0.5">
+                      {consultants.map((c) => c.entity_name || c.entity_id).join(", ")}
+                    </p>
+                  </div>
+                )}
+                {bidders.length > 0 && (
+                  <div className="text-sm pt-1 border-t border-border/40">
+                    <span className="text-muted-foreground text-xs">Bidders</span>
+                    <p className="font-medium text-xs mt-0.5">
+                      {bidders.map((b) => b.entity_name || b.entity_id).join(", ")}
+                    </p>
+                  </div>
+                )}
+                {lead.notes && (
+                  <div className="pt-1 border-t border-border/40">
+                    <span className="text-muted-foreground text-xs">Notes</span>
+                    <p className="text-xs mt-0.5 leading-relaxed">{lead.notes}</p>
+                  </div>
+                )}
+                {lead.additional_information &&
+                  typeof lead.additional_information === "object" &&
+                  Object.keys(lead.additional_information).length > 0 && (
+                    <div className="pt-1 border-t border-border/40 space-y-1">
+                      <span className="text-muted-foreground text-xs">Additional</span>
+                      {Object.entries(lead.additional_information).map(([key, value]) => (
+                        <div key={key} className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{key}</span>
+                          <span className="font-medium">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ── RIGHT CONTENT (70%) ── */}
+          <Card className="border-border/60">
+            <CardContent className="p-4">
+              <Tabs defaultValue="timeline" className="w-full" onValueChange={setActiveTab}>
+                <TabsList className="w-full flex overflow-x-auto h-auto p-0.5 gap-0.5 mb-3">
+                  <TabsTrigger value="timeline" className="text-[11px] py-1.5 px-2.5">
+                    Timeline
+                  </TabsTrigger>
+                  <TabsTrigger value="boqs" className="text-[11px] py-1.5 px-2.5">
+                    BOQs ({boqs.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="orders" className="text-[11px] py-1.5 px-2.5">
+                    PI ({salesOrders.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="invoices" className="text-[11px] py-1.5 px-2.5">
+                    PO ({purchaseOrders.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="payments" className="text-[11px] py-1.5 px-2.5">
+                    Payments ({payments.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="warranties" className="text-[11px] py-1.5 px-2.5">
+                    Warranties ({warranties.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="involvement" className="text-[11px] py-1.5 px-2.5">
+                    Involvement ({involvements?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="remarks" className="text-[11px] py-1.5 px-2.5">
                   Remarks ({remarks?.length || 0})
                 </TabsTrigger>
                 <TabsTrigger value="documents" className="text-[11px] py-1.5 px-2.5">
@@ -2762,6 +2790,7 @@ const LeadDetail = () => {
             </Tabs>
           </CardContent>
         </Card>
+        </div>{/* end 30:70 grid */}
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

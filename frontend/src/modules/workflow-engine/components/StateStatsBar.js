@@ -1,6 +1,5 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent } from "../../../components/ui/card";
 import {
   Select,
   SelectContent,
@@ -28,7 +27,6 @@ const StateStatsBar = ({
     enabled: !!selectedSopId,
   });
 
-  // Auto-select first SOP when loaded
   React.useEffect(() => {
     if (sops.length > 0 && !selectedSopId) {
       onSopChange(sops[0].id);
@@ -50,13 +48,13 @@ const StateStatsBar = ({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       {/* SOP Selector */}
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-muted-foreground">SOP:</span>
         {selectedSopId ? (
           <Select value={selectedSopId} onValueChange={onSopChange}>
-            <SelectTrigger className="w-56 h-8 text-xs">
+            <SelectTrigger className="w-48 h-7 text-xs">
               <SelectValue placeholder="Select SOP" />
             </SelectTrigger>
             <SelectContent>
@@ -72,45 +70,42 @@ const StateStatsBar = ({
         )}
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats row — full width, equal distribution */}
       {selectedSopId && (
-        <div className="flex flex-wrap gap-2">
-          <Card
-            className={`cursor-pointer transition-all ${
-              !activeStateFilter
-                ? "ring-1 ring-primary shadow-sm"
-                : "hover:shadow-sm"
-            }`}
+        <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${statesList.length + 1}, 1fr)` }}>
+          {/* Total */}
+          <button
             onClick={() => onStateFilter?.(null)}
+            className={`text-left rounded-md border px-3 py-2 transition-all ${
+              !activeStateFilter
+                ? "border-primary bg-primary/5 shadow-sm"
+                : "border-border/50 hover:border-border hover:bg-muted/30"
+            }`}
           >
-            <CardContent className="px-3 py-2">
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                Total
-              </p>
-              <p className="text-lg font-bold leading-tight">{total}</p>
-            </CardContent>
-          </Card>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider leading-none">
+              Total
+            </p>
+            <p className="text-base font-bold mt-1 leading-none">{total}</p>
+          </button>
 
           {statesList.map((state) => (
-            <Card
+            <button
               key={state.id}
-              className={`cursor-pointer transition-all ${
-                activeStateFilter === state.id
-                  ? "ring-1 ring-primary shadow-sm"
-                  : "hover:shadow-sm"
-              }`}
               onClick={() => onStateFilter?.(state.id)}
+              className={`text-left rounded-md border px-3 py-2 transition-all ${
+                activeStateFilter === state.id
+                  ? "border-primary bg-primary/5 shadow-sm"
+                  : "border-border/50 hover:border-border hover:bg-muted/30"
+              }`}
             >
-              <CardContent className="px-3 py-2">
-                <p
-                  className="text-[10px] font-medium uppercase tracking-wider"
-                  style={{ color: state.color }}
-                >
-                  {state.name}
-                </p>
-                <p className="text-lg font-bold leading-tight">{state.count}</p>
-              </CardContent>
-            </Card>
+              <p
+                className="text-[10px] font-medium uppercase tracking-wider leading-none truncate"
+                style={{ color: state.color }}
+              >
+                {state.name}
+              </p>
+              <p className="text-base font-bold mt-1 leading-none">{state.count}</p>
+            </button>
           ))}
         </div>
       )}
