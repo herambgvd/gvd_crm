@@ -833,109 +833,101 @@ const LeadDetail = () => {
     <Layout>
       <div data-testid="lead-detail-page">
         {/* Top bar */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <Button variant="ghost" size="sm" onClick={() => navigate("/leads")}>
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
             Leads
           </Button>
           <Button size="sm" variant="outline" onClick={() => navigate(`/leads/edit/${id}`)}>
-            Edit
+            Edit Lead
           </Button>
         </div>
 
         {/* 30:70 split layout */}
-        <div className="grid grid-cols-[300px_1fr] gap-4 items-start">
-          {/* ── LEFT SIDEBAR (30%) ── */}
-          <div className="space-y-3 sticky top-4">
-            {/* Lead header */}
-            <Card className="border-border/60">
-              <CardContent className="p-4 space-y-3">
-                <div>
-                  <h1 className="text-base font-semibold tracking-tight leading-snug">
-                    {lead.project_name || "Untitled Project"}
-                  </h1>
-                  {lead.customer_name && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                      <Building className="h-3 w-3" />
-                      {lead.customer_name}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="grid grid-cols-[280px_1fr] gap-5 items-start">
+          {/* ── LEFT SIDEBAR ── */}
+          <div className="sticky top-4">
+            <Card className="border-border/60 overflow-hidden">
+              {/* Header section */}
+              <div className="p-4 pb-3 bg-gradient-to-b from-muted/40 to-transparent">
+                <h1 className="text-sm font-semibold tracking-tight leading-snug">
+                  {lead.project_name || "Untitled Project"}
+                </h1>
+                {lead.customer_name && (
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-1">
+                    <Building className="h-3 w-3 flex-shrink-0" />
+                    {lead.customer_name}
+                  </p>
+                )}
+                <div className="flex items-center gap-1.5 flex-wrap mt-2">
                   <StateBadge stateName={lead.current_state_name} stateColor={null} />
                   <Badge variant="outline" className="capitalize text-[10px] h-5">{lead.priority}</Badge>
-                  {lead.source && (
-                    <Badge variant="secondary" className="text-[10px] h-5">{lead.source}</Badge>
-                  )}
                 </div>
+              </div>
 
-                {/* Transition actions */}
-                {lead.sop_id && (
-                  <div className="pt-2 border-t border-border/40">
-                    <TransitionActions
-                      recordType="lead"
-                      recordId={lead.id}
-                      invalidateKeys={[["lead", id], ["leads"]]}
-                    />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              {/* Transition actions */}
+              {lead.sop_id && (
+                <div className="px-4 pb-3 border-b border-border/40">
+                  <TransitionActions
+                    recordType="lead"
+                    recordId={lead.id}
+                    invalidateKeys={[["lead", id], ["leads"]]}
+                  />
+                </div>
+              )}
 
-            {/* Key details */}
-            <Card className="border-border/60">
-              <CardContent className="p-4 space-y-2.5">
-                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Details</p>
+              {/* Details list */}
+              <div className="p-4 space-y-2">
                 {lead.expected_value && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Value</span>
-                    <span className="font-semibold text-green-600">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground">Value</span>
+                    <span className="text-xs font-semibold text-green-600">
                       ₹{Number(lead.expected_value).toLocaleString("en-IN")}
                     </span>
                   </div>
                 )}
                 {lead.expected_close_date && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Close Date</span>
-                    <span className="font-medium">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground">Close Date</span>
+                    <span className="text-xs font-medium">
                       {new Date(lead.expected_close_date).toLocaleDateString("en-IN")}
                     </span>
                   </div>
                 )}
                 {lead.source && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Source</span>
-                    <span className="font-medium">{lead.source}</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground">Source</span>
+                    <span className="text-xs font-medium">{lead.source}</span>
                   </div>
                 )}
+
                 {consultants.length > 0 && (
-                  <div className="text-sm pt-1 border-t border-border/40">
-                    <span className="text-muted-foreground text-xs">Consultant</span>
-                    <p className="font-medium text-xs mt-0.5">
+                  <div className="pt-2 mt-1 border-t border-border/30">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Consultant</span>
+                    <p className="text-xs font-medium mt-0.5 leading-snug">
                       {consultants.map((c) => c.entity_name || c.entity_id).join(", ")}
                     </p>
                   </div>
                 )}
                 {bidders.length > 0 && (
-                  <div className="text-sm pt-1 border-t border-border/40">
-                    <span className="text-muted-foreground text-xs">Bidders</span>
-                    <p className="font-medium text-xs mt-0.5">
+                  <div className="pt-2 mt-1 border-t border-border/30">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Bidders</span>
+                    <p className="text-xs font-medium mt-0.5 leading-snug">
                       {bidders.map((b) => b.entity_name || b.entity_id).join(", ")}
                     </p>
                   </div>
                 )}
                 {lead.notes && (
-                  <div className="pt-1 border-t border-border/40">
-                    <span className="text-muted-foreground text-xs">Notes</span>
-                    <p className="text-xs mt-0.5 leading-relaxed">{lead.notes}</p>
+                  <div className="pt-2 mt-1 border-t border-border/30">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Notes</span>
+                    <p className="text-xs mt-0.5 leading-relaxed text-foreground/80">{lead.notes}</p>
                   </div>
                 )}
                 {lead.additional_information &&
                   typeof lead.additional_information === "object" &&
                   Object.keys(lead.additional_information).length > 0 && (
-                    <div className="pt-1 border-t border-border/40 space-y-1">
-                      <span className="text-muted-foreground text-xs">Additional</span>
+                    <div className="pt-2 mt-1 border-t border-border/30 space-y-1">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Additional</span>
                       {Object.entries(lead.additional_information).map(([key, value]) => (
                         <div key={key} className="flex justify-between text-xs">
                           <span className="text-muted-foreground">{key}</span>
@@ -944,46 +936,45 @@ const LeadDetail = () => {
                       ))}
                     </div>
                   )}
-              </CardContent>
+              </div>
             </Card>
           </div>
 
-          {/* ── RIGHT CONTENT (70%) ── */}
-          <Card className="border-border/60">
-            <CardContent className="p-4">
-              <Tabs defaultValue="timeline" className="w-full" onValueChange={setActiveTab}>
-                <TabsList className="w-full flex overflow-x-auto h-auto p-0.5 gap-0.5 mb-3">
-                  <TabsTrigger value="timeline" className="text-[11px] py-1.5 px-2.5">
-                    Timeline
-                  </TabsTrigger>
-                  <TabsTrigger value="boqs" className="text-[11px] py-1.5 px-2.5">
-                    BOQs ({boqs.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="orders" className="text-[11px] py-1.5 px-2.5">
-                    PI ({salesOrders.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="invoices" className="text-[11px] py-1.5 px-2.5">
-                    PO ({purchaseOrders.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="payments" className="text-[11px] py-1.5 px-2.5">
-                    Payments ({payments.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="warranties" className="text-[11px] py-1.5 px-2.5">
-                    Warranties ({warranties.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="involvement" className="text-[11px] py-1.5 px-2.5">
-                    Involvement ({involvements?.length || 0})
-                  </TabsTrigger>
-                  <TabsTrigger value="remarks" className="text-[11px] py-1.5 px-2.5">
+          {/* ── RIGHT CONTENT ── */}
+          <div>
+            <Tabs defaultValue="timeline" className="w-full" onValueChange={setActiveTab}>
+              <TabsList className="w-full flex overflow-x-auto h-auto p-0.5 gap-0.5 mb-3 bg-muted/50 rounded-lg">
+                <TabsTrigger value="timeline" className="text-[11px] py-1.5 px-2">
+                  Timeline
+                </TabsTrigger>
+                <TabsTrigger value="boqs" className="text-[11px] py-1.5 px-2">
+                  BOQs ({boqs.length})
+                </TabsTrigger>
+                <TabsTrigger value="orders" className="text-[11px] py-1.5 px-2">
+                  PI ({salesOrders.length})
+                </TabsTrigger>
+                <TabsTrigger value="invoices" className="text-[11px] py-1.5 px-2">
+                  PO ({purchaseOrders.length})
+                </TabsTrigger>
+                <TabsTrigger value="payments" className="text-[11px] py-1.5 px-2">
+                  Payments ({payments.length})
+                </TabsTrigger>
+                <TabsTrigger value="warranties" className="text-[11px] py-1.5 px-2">
+                  Warranties ({warranties.length})
+                </TabsTrigger>
+                <TabsTrigger value="involvement" className="text-[11px] py-1.5 px-2">
+                  Inv. ({involvements?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="remarks" className="text-[11px] py-1.5 px-2">
                   Remarks ({remarks?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="documents" className="text-[11px] py-1.5 px-2.5">
-                  Documents ({documents?.length || 0})
+                <TabsTrigger value="documents" className="text-[11px] py-1.5 px-2">
+                  Docs ({documents?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="assign" className="text-[11px] py-1.5 px-2.5">
+                <TabsTrigger value="assign" className="text-[11px] py-1.5 px-2">
                   Assign ({assignments?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="comments" className="text-[11px] py-1.5 px-2.5">
+                <TabsTrigger value="comments" className="text-[11px] py-1.5 px-2">
                   Comments ({comments?.length || 0})
                 </TabsTrigger>
               </TabsList>
@@ -2788,8 +2779,7 @@ const LeadDetail = () => {
                 </Dialog>
               </TabsContent>
             </Tabs>
-          </CardContent>
-        </Card>
+          </div>
         </div>{/* end 30:70 grid */}
 
         {/* Delete Confirmation Dialog */}
