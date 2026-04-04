@@ -63,6 +63,7 @@ class SOPService(BaseCRUDService):
         data["states"] = states
         data["transitions"] = transitions
         data["version"] = 1
+        data["is_active"] = True
 
         return await self.create(data, user_id=user_id)
 
@@ -103,7 +104,7 @@ class SOPService(BaseCRUDService):
         """List SOPs for a module."""
         query: Dict[str, Any] = {"module": module}
         if active_only:
-            query["is_active"] = True
+            query["is_active"] = {"$ne": False}
         return await self.find_many(query=query, sort=[("name", 1)])
 
     async def get_stats(self, module: str, sop_id: str) -> Dict[str, Any]:

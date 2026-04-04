@@ -818,178 +818,144 @@ const LeadDetail = () => {
     );
   }
 
+  const consultants = involvements?.filter((inv) => inv.involvement_type === "consultant") || [];
+  const bidders = involvements?.filter((inv) => inv.involvement_type === "si") || [];
+
+  const InfoItem = ({ label, children }) =>
+    children ? (
+      <div className="text-sm">
+        <span className="text-muted-foreground">{label}</span>
+        <div className="font-medium mt-0.5">{children}</div>
+      </div>
+    ) : null;
+
   return (
     <Layout>
-      <div className="space-y-6" data-testid="lead-detail-page">
+      <div className="space-y-4" data-testid="lead-detail-page">
+        {/* Top bar */}
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate("/leads")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Leads
+          <Button variant="ghost" size="sm" onClick={() => navigate("/leads")}>
+            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+            Leads
           </Button>
-          <Button onClick={() => navigate(`/leads/edit/${id}`)}>
-            Edit Lead
+          <Button size="sm" variant="outline" onClick={() => navigate(`/leads/edit/${id}`)}>
+            Edit
           </Button>
         </div>
 
-        {/* Lead Info Card */}
-        <Card className="border border-gray-200">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <CardTitle className="text-xl font-semibold text-blue-600">
-                  {lead.project_name || "Untitled Project"}
-                </CardTitle>
-                {lead.customer_name && (
-                  <p className="text-lg text-sm text-muted-foreground flex items-center gap-2">
-                    <Building className="h-4 w-4" />
-                    {lead.customer_name}
-                  </p>
-                )}
-                <div className="flex items-center gap-2 mt-3 flex-wrap">
-                  <StateBadge
-                    stateName={lead.current_state_name}
-                    stateColor={null}
-                  />
-                  <Badge variant="outline" className="capitalize">{lead.priority}</Badge>
-                </div>
-              </div>
-              {/* Workflow Transition Actions */}
-              {lead.sop_id && (
-                <div className="ml-4">
-                  <TransitionActions
-                    recordType="lead"
-                    recordId={lead.id}
-                    invalidateKeys={[["lead", id], ["leads"]]}
-                  />
-                </div>
+        {/* Header row: name + state + actions */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold tracking-tight truncate">
+              {lead.project_name || "Untitled Project"}
+            </h1>
+            {lead.customer_name && (
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                <Building className="h-3.5 w-3.5" />
+                {lead.customer_name}
+              </p>
+            )}
+            <div className="flex items-center gap-2 mt-2">
+              <StateBadge stateName={lead.current_state_name} stateColor={null} />
+              <Badge variant="outline" className="capitalize text-xs">{lead.priority}</Badge>
+              {lead.source && (
+                <Badge variant="secondary" className="text-xs">{lead.source}</Badge>
               )}
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                {lead.customer_name && (
-                  <div className="flex items-center gap-2">
-                    <Building className="h-4 w-4 text-gray-500" />
-                    <span className="font-medium">Customer:</span>
-                    <span>{lead.customer_name}</span>
-                  </div>
-                )}
-                {involvements?.filter((inv) => inv.involvement_type === "consultant").map((inv) => (
-                  <div key={inv.id} className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <span className="font-medium">Consultant:</span>
-                    <span className="text-sm text-gray-600">{inv.entity_name || inv.entity_id}</span>
-                  </div>
-                ))}
-                {involvements?.filter((inv) => inv.involvement_type === "si").length > 0 && (
-                  <div className="flex items-start gap-2">
-                    <Settings className="h-4 w-4 text-gray-500 mt-0.5" />
-                    <span className="font-medium">Bidders:</span>
-                    <span className="text-sm text-gray-600">
-                      {involvements.filter((inv) => inv.involvement_type === "si").map((inv) => inv.entity_name || inv.entity_id).join(", ")}
-                    </span>
-                  </div>
-                )}
-                {lead.assigned_to && (
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <span className="font-medium">Assigned To:</span>
-                    <span>{lead.assigned_to}</span>
-                  </div>
-                )}
-                {lead.expected_value && (
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">Expected Value:</span>
-                    <span className="text-green-600 font-semibold">
-                      ₹{Number(lead.expected_value).toLocaleString("en-IN")}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <span className="font-medium">Source:</span> {lead.source}
-                </div>
-                {lead.expected_close_date && (
-                  <div>
-                    <span className="font-medium">Expected Close:</span>{" "}
-                    {new Date(lead.expected_close_date).toLocaleDateString("en-IN")}
-                  </div>
-                )}
-                {lead.notes && (
-                  <div>
-                    <span className="font-medium">Notes:</span>
-                    <p className="text-sm text-gray-600 mt-1">{lead.notes}</p>
-                  </div>
-                )}
-              </div>
-            </div>
+          </div>
+          {lead.sop_id && (
+            <TransitionActions
+              recordType="lead"
+              recordId={lead.id}
+              invalidateKeys={[["lead", id], ["leads"]]}
+            />
+          )}
+        </div>
 
-            {/* Additional Information */}
+        {/* Key info grid */}
+        <Card className="border-border/60">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <InfoItem label="Expected Value">
+                {lead.expected_value && (
+                  <span className="text-green-600">
+                    ₹{Number(lead.expected_value).toLocaleString("en-IN")}
+                  </span>
+                )}
+              </InfoItem>
+              <InfoItem label="Expected Close">
+                {lead.expected_close_date &&
+                  new Date(lead.expected_close_date).toLocaleDateString("en-IN")}
+              </InfoItem>
+              <InfoItem label="Consultant">
+                {consultants.length > 0 &&
+                  consultants.map((c) => c.entity_name || c.entity_id).join(", ")}
+              </InfoItem>
+              <InfoItem label="Bidders">
+                {bidders.length > 0 &&
+                  bidders.map((b) => b.entity_name || b.entity_id).join(", ")}
+              </InfoItem>
+            </div>
+            {lead.notes && (
+              <div className="mt-3 pt-3 border-t border-border/40">
+                <p className="text-xs text-muted-foreground">Notes</p>
+                <p className="text-sm mt-0.5">{lead.notes}</p>
+              </div>
+            )}
             {lead.additional_information &&
               typeof lead.additional_information === "object" &&
               Object.keys(lead.additional_information).length > 0 && (
-                <div className="mt-6 pt-6 border-t">
-                  <h4 className="font-semibold mb-3">Additional Information</h4>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      {Object.entries(lead.additional_information).map(
-                        ([key, value]) => (
-                          <div
-                            key={key}
-                            className="flex items-center gap-2 text-sm"
-                          >
-                            <span className="font-medium text-gray-700">
-                              {key}:
-                            </span>
-                            <span className="text-gray-600">{value}</span>
-                          </div>
-                        ),
-                      )}
-                    </div>
+                <div className="mt-3 pt-3 border-t border-border/40">
+                  <p className="text-xs text-muted-foreground mb-1.5">Additional Info</p>
+                  <div className="flex flex-wrap gap-x-6 gap-y-1">
+                    {Object.entries(lead.additional_information).map(([key, value]) => (
+                      <span key={key} className="text-sm">
+                        <span className="text-muted-foreground">{key}:</span>{" "}
+                        <span className="font-medium">{value}</span>
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}
           </CardContent>
         </Card>
 
-        {/* Tabs for Related Data */}
-        <Card className="border border-gray-200">
-          <CardContent className="pt-6">
-            <Tabs defaultValue="boqs" className="w-full" onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-11 h-auto p-1">
-                <TabsTrigger value="timeline" className="text-xs py-2">
+        {/* Tabs */}
+        <Card className="border-border/60">
+          <CardContent className="pt-4">
+            <Tabs defaultValue="timeline" className="w-full" onValueChange={setActiveTab}>
+              <TabsList className="w-full flex overflow-x-auto h-auto p-0.5 gap-0.5">
+                <TabsTrigger value="timeline" className="text-[11px] py-1.5 px-2.5">
                   Timeline
                 </TabsTrigger>
-                <TabsTrigger value="boqs" className="text-xs py-2">
+                <TabsTrigger value="boqs" className="text-[11px] py-1.5 px-2.5">
                   BOQs ({boqs.length})
                 </TabsTrigger>
-                <TabsTrigger value="orders" className="text-xs py-2">
+                <TabsTrigger value="orders" className="text-[11px] py-1.5 px-2.5">
                   PI ({salesOrders.length})
                 </TabsTrigger>
-                <TabsTrigger value="invoices" className="text-xs py-2">
+                <TabsTrigger value="invoices" className="text-[11px] py-1.5 px-2.5">
                   PO ({purchaseOrders.length})
                 </TabsTrigger>
-                <TabsTrigger value="payments" className="text-xs py-2">
+                <TabsTrigger value="payments" className="text-[11px] py-1.5 px-2.5">
                   Payments ({payments.length})
                 </TabsTrigger>
-                <TabsTrigger value="warranties" className="text-xs py-2">
+                <TabsTrigger value="warranties" className="text-[11px] py-1.5 px-2.5">
                   Warranties ({warranties.length})
                 </TabsTrigger>
-                <TabsTrigger value="involvement" className="text-xs py-2">
+                <TabsTrigger value="involvement" className="text-[11px] py-1.5 px-2.5">
                   Involvement ({involvements?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="remarks" className="text-xs py-2">
+                <TabsTrigger value="remarks" className="text-[11px] py-1.5 px-2.5">
                   Remarks ({remarks?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="documents" className="text-xs py-2">
+                <TabsTrigger value="documents" className="text-[11px] py-1.5 px-2.5">
                   Documents ({documents?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="assign" className="text-xs py-2">
+                <TabsTrigger value="assign" className="text-[11px] py-1.5 px-2.5">
                   Assign ({assignments?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="comments" className="text-xs py-2">
+                <TabsTrigger value="comments" className="text-[11px] py-1.5 px-2.5">
                   Comments ({comments?.length || 0})
                 </TabsTrigger>
               </TabsList>
