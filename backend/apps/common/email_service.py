@@ -92,7 +92,7 @@ async def send_welcome_email(
     The email also serves as email verification
     """
     config = await get_email_config()
-    platform_name = config.get("platform_name", "Flowops") if config else "Flowops"
+    platform_name = config.get("platform_name", "Stackless") if config else "Stackless"
     support_email = config.get("support_email", "") if config else ""
     
     # Generate verification URL if token provided
@@ -228,6 +228,29 @@ async def send_welcome_email(
     """
     
     return await send_email(user_email, subject, html_content, text_content)
+
+
+async def send_password_reset_email(email: str, token: str):
+    """Send password reset email with token link."""
+    reset_url = f"{settings.BASE_URL}/reset-password?token={token}"
+
+    html_content = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1a1a1a;">Reset Your Password</h2>
+        <p>You requested a password reset for your Stackless account.</p>
+        <p>Click the button below to set a new password. This link expires in 1 hour.</p>
+        <a href="{reset_url}" style="display: inline-block; background-color: #0f172a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 16px 0;">
+            Reset Password
+        </a>
+        <p style="color: #666; font-size: 12px; margin-top: 24px;">
+            If you didn't request this, you can safely ignore this email.
+        </p>
+    </div>
+    """
+
+    result = await send_email(email, "Reset Your Password - Stackless", html_content)
+    if not result:
+        raise Exception("Failed to send password reset email")
 
 
 async def generate_verification_token(user_id: str) -> str:

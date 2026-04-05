@@ -202,6 +202,68 @@ class UserService:
         
         return True
 
+    async def create_password_reset_token(self, email: str) -> str:
+        """Generate a password reset token, store it, and return it."""
+        import uuid, hashlib
+        from datetime import datetime, timezone, timedelta
+
+        user = await self.db.users.find_one({"email": email, "is_active": True}, {"_id": 0, "id": 1, "email": 1, "first_name": 1})
+        if not user:
+            return None  # Don't reveal if email exists
+
+        token = hashlib.sha256(f"{uuid.uuid4()}{email}".encode()).hexdigest()
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+
+        await self.db.password_reset_tokens.insert_one({
+            "token": token,
+            "user_id": user["id"],
+            "email": email,
+            "expires_at": expires_at.isoformat(),
+            "used": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+        return token
+
+    async def reset_password_with_token(self, token: str, new_password: str) -> bool:
+        """Validate token and reset password."""
+        from datetime import datetime, timezone
+        from .schemas import validate_password_strength
+        from core.auth import auth_service
+
+        validate_password_strength(new_password)
+
+        token_doc = await self.db.password_reset_tokens.find_one({
+            "token": token,
+            "used": False,
+        })
+
+        if not token_doc:
+            return False
+
+        # Check expiry
+        expires_at = datetime.fromisoformat(token_doc["expires_at"])
+        if datetime.now(timezone.utc) > expires_at:
+            return False
+
+        # Update password
+        hashed = auth_service.get_password_hash(new_password)
+        await self.db.users.update_one(
+            {"id": token_doc["user_id"]},
+            {"$set": {
+                "hashed_password": hashed,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }}
+        )
+
+        # Mark token as used
+        await self.db.password_reset_tokens.update_one(
+            {"token": token},
+            {"$set": {"used": True}}
+        )
+
+        return True
+
     async def get_all_users(self) -> List[User]:
         """Get all users"""
         users = await self.db.users.find({}, {"_id": 0}).to_list(1000)

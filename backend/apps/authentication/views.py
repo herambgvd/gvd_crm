@@ -49,12 +49,21 @@ async def login(login_data: LoginRequest):
         {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}}
     )
 
+    # Load user permissions
+    from core.permissions import _get_role_permissions
+    user_permissions = []
+    if user.is_superuser:
+        from core.permissions import DEFAULT_PERMISSIONS
+        user_permissions = [p["codename"] for p in DEFAULT_PERMISSIONS]
+    elif user.role_id:
+        user_permissions = await _get_role_permissions(user.role_id)
+
     return LoginResponse(
         access_token=access_token,
         refresh_token=refresh_token,
         token_type="bearer",
         expires_in=settings.JWT_EXPIRATION_HOURS * 3600,
-        user=UserResponse.from_user(user)
+        user=UserResponse.from_user(user, permissions=user_permissions)
     )
 
 @router.post("/register", response_model=UserResponse)
@@ -71,7 +80,14 @@ async def register(
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information"""
-    return UserResponse.from_user(current_user)
+    from core.permissions import _get_role_permissions, DEFAULT_PERMISSIONS
+    if current_user.is_superuser:
+        permissions = [p["codename"] for p in DEFAULT_PERMISSIONS]
+    elif current_user.role_id:
+        permissions = await _get_role_permissions(current_user.role_id)
+    else:
+        permissions = []
+    return UserResponse.from_user(current_user, permissions=permissions)
 
 @router.put("/me", response_model=UserResponse)
 async def update_current_user(
@@ -94,6 +110,49 @@ async def change_password(
     user_service = UserService(db)
     await user_service.change_password(current_user.id, password_data)
     return {"message": "Password changed successfully"}
+
+@router.post("/forgot-password")
+async def forgot_password(data: dict, db=Depends(get_database)):
+    """Request password reset email."""
+    email = data.get("email", "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+
+    user_service = UserService(db)
+    token = await user_service.create_password_reset_token(email)
+
+    if token:
+        # Send reset email
+        try:
+            from apps.common.email_service import send_password_reset_email
+            await send_password_reset_email(email, token)
+        except Exception:
+            logger.exception("Failed to send password reset email")
+
+    # Always return success to prevent email enumeration
+    return {"message": "If the email exists, a password reset link has been sent."}
+
+
+@router.post("/reset-password")
+async def reset_password(data: dict, db=Depends(get_database)):
+    """Reset password using token."""
+    token = data.get("token", "")
+    new_password = data.get("new_password", "")
+
+    if not token or not new_password:
+        raise HTTPException(status_code=400, detail="Token and new password are required")
+
+    user_service = UserService(db)
+    try:
+        success = await user_service.reset_password_with_token(token, new_password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if not success:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    return {"message": "Password reset successfully. You can now login."}
+
 
 @router.post("/logout")
 async def logout(current_user: User = Depends(get_current_user)):

@@ -38,7 +38,7 @@ class ConfigUpdate(BaseModel):
 
 class ConfigResponse(BaseModel):
     id: str
-    platform_name: str = "Flowops"
+    platform_name: str = "Stackless"
     company_name: str = ""
     company_tagline: str = ""
     support_email: str = ""
@@ -67,7 +67,7 @@ async def get_config(
         # Create default config if not exists
         config = {
             "id": str(uuid.uuid4()),
-            "platform_name": "Flowops",
+            "platform_name": "Stackless",
             "company_name": "",
             "company_tagline": "",
             "support_email": "",

@@ -145,9 +145,10 @@ class UserResponse(BaseModel):
     last_login: Optional[datetime] = None
     created_at: datetime
     is_email_verified: Optional[bool] = False
-    
+    permissions: List[str] = Field(default_factory=list)
+
     @classmethod
-    def from_user(cls, user: "User"):
+    def from_user(cls, user: "User", permissions: list = None):
         """Create UserResponse from User model"""
         return cls(
             id=user.id,
@@ -163,7 +164,8 @@ class UserResponse(BaseModel):
             profile_picture=user.profile_picture,
             last_login=user.last_login,
             created_at=user.created_at,
-            is_email_verified=False  # Default for now
+            is_email_verified=False,  # Default for now
+            permissions=permissions or [],
         )
 
 class PasswordChangeRequest(BaseModel):

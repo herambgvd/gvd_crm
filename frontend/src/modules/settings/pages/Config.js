@@ -184,7 +184,7 @@ const Config = () => {
                       onChange={(e) =>
                         handlePlatformChange("platform_name", e.target.value)
                       }
-                      placeholder="e.g., Flowops CRM"
+                      placeholder="e.g., Stackless CRM"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       This name will appear in the header and login page
@@ -334,7 +334,7 @@ const Config = () => {
                       onChange={(e) =>
                         handleEmailChange("smtp_from_name", e.target.value)
                       }
-                      placeholder="Flowops CRM"
+                      placeholder="Stackless CRM"
                     />
                   </div>
                 </div>

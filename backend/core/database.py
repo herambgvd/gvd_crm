@@ -141,6 +141,10 @@ class DatabaseManager:
             await self.database.assignments.create_index([("created_at", -1)])
             
 
+            # Password reset tokens
+            await self.database.password_reset_tokens.create_index("token", unique=True)
+            await self.database.password_reset_tokens.create_index("expires_at")
+
             # Role and Permission indexes
             await self.database.roles.create_index("name", unique=True)
             await self.database.permissions.create_index("codename", unique=True)

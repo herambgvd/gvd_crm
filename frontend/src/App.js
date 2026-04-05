@@ -10,7 +10,7 @@ import NotFound from "./components/common/NotFound";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 
 // Module imports — each module barrel exports its pages
-import { Login } from "./modules/auth";
+import { Login, ForgotPassword, ResetPassword } from "./modules/auth";
 import { Dashboard } from "./modules/dashboard";
 import { Leads, LeadForm, LeadDetail } from "./modules/leads";
 import { Entities, EntityForm, EntityDetail } from "./modules/entities";
@@ -74,18 +74,40 @@ const queryClient = new QueryClient({
 });
 
 // ─── Route Guards ──────────────────────────────
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
-  return user ? children : <Navigate to="/login" />;
+  if (!user) return <Navigate to="/login" />;
+
+  // Permission check (superusers bypass)
+  if (permission && !user.is_superuser) {
+    const userPerms = user.permissions || [];
+    if (!userPerms.includes(permission)) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center space-y-3">
+            <h2 className="text-lg font-semibold">Access Denied</h2>
+            <p className="text-sm text-muted-foreground">
+              You don't have permission to access this page.
+            </p>
+            <a href="/dashboard" className="text-primary text-sm hover:underline">
+              Go to Dashboard
+            </a>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  return children;
 }
 
 function PublicRoute({ children }) {
@@ -103,7 +125,7 @@ function PublicRoute({ children }) {
 }
 
 // ─── Helper to wrap protected routes ───────────
-const P = ({ children }) => <ProtectedRoute>{children}</ProtectedRoute>;
+const P = ({ children, permission }) => <ProtectedRoute permission={permission}>{children}</ProtectedRoute>;
 
 // ─── App ───────────────────────────────────────
 function App() {
@@ -122,6 +144,9 @@ function App() {
                 </PublicRoute>
               }
             />
+
+            <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Dashboard */}
             <Route
@@ -485,54 +510,12 @@ function App() {
             />
 
             {/* Settings */}
-            <Route
-              path="/settings/users"
-              element={
-                <P>
-                  <Users />
-                </P>
-              }
-            />
-            <Route
-              path="/settings/users/new"
-              element={
-                <P>
-                  <UserForm />
-                </P>
-              }
-            />
-            <Route
-              path="/settings/users/edit/:id"
-              element={
-                <P>
-                  <UserForm />
-                </P>
-              }
-            />
-            <Route
-              path="/settings/roles"
-              element={
-                <P>
-                  <Roles />
-                </P>
-              }
-            />
-            <Route
-              path="/settings/roles/new"
-              element={
-                <P>
-                  <RoleForm />
-                </P>
-              }
-            />
-            <Route
-              path="/settings/roles/edit/:id"
-              element={
-                <P>
-                  <RoleForm />
-                </P>
-              }
-            />
+            <Route path="/settings/users" element={<P permission="users:view"><Users /></P>} />
+            <Route path="/settings/users/new" element={<P permission="users:create"><UserForm /></P>} />
+            <Route path="/settings/users/edit/:id" element={<P permission="users:create"><UserForm /></P>} />
+            <Route path="/settings/roles" element={<P permission="roles:view"><Roles /></P>} />
+            <Route path="/settings/roles/new" element={<P permission="roles:create"><RoleForm /></P>} />
+            <Route path="/settings/roles/edit/:id" element={<P permission="roles:create"><RoleForm /></P>} />
             <Route
               path="/settings/teams"
               element={
@@ -591,30 +574,9 @@ function App() {
             />
 
             {/* Workflow Engine (SOP Builder) */}
-            <Route
-              path="/settings/workflows"
-              element={
-                <P>
-                  <SOPList />
-                </P>
-              }
-            />
-            <Route
-              path="/settings/workflows/new"
-              element={
-                <P>
-                  <SOPBuilder />
-                </P>
-              }
-            />
-            <Route
-              path="/settings/workflows/:id/edit"
-              element={
-                <P>
-                  <SOPBuilder />
-                </P>
-              }
-            />
+            <Route path="/settings/workflows" element={<P permission="workflows:view"><SOPList /></P>} />
+            <Route path="/settings/workflows/new" element={<P permission="workflows:create"><SOPBuilder /></P>} />
+            <Route path="/settings/workflows/:id/edit" element={<P permission="workflows:create"><SOPBuilder /></P>} />
 
             {/* Inventory Management (New Module) */}
             <Route

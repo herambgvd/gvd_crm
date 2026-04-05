@@ -59,7 +59,7 @@ const PITemplatePreview = ({ poData, template }) => {
   if (!template) {
     template = {
       header_text: "PROFORMA INVOICE",
-      company_name: "Flowops",
+      company_name: "Stackless",
       company_address: "",
       company_phone: "",
       company_email: "",
@@ -105,7 +105,7 @@ const PITemplatePreview = ({ poData, template }) => {
             ) : (
               <div className="text-center p-8 bg-gray-50 mb-6">
                 <h1 className="text-xl font-semibold text-gray-900">
-                  {template.company_name || "Flowops"}
+                  {template.company_name || "Stackless"}
                 </h1>
                 {template.company_address && (
                   <p className="text-sm text-gray-600 mt-3">

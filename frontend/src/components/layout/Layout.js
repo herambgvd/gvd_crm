@@ -187,6 +187,16 @@ const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
     { name: "Config", href: "/settings/config", icon: Settings },
   ];
 
+  const hasPermission = (perm) => user?.is_superuser || (user?.permissions || []).includes(perm);
+
+  // Filter settings menu items based on permissions
+  const visibleSettingsItems = settingsMenuItems.filter(item => {
+    if (item.href === "/settings/users") return hasPermission("users:view");
+    if (item.href === "/settings/roles") return hasPermission("roles:view");
+    if (item.href === "/settings/workflows") return hasPermission("workflows:view");
+    return true;
+  });
+
   // Check if any items in each section are active
   const isSalesActive = salesMenuItems.some((item) => isActive(item.href));
   const isSupportActive = supportMenuItems.some((item) => isActive(item.href));
@@ -244,7 +254,7 @@ const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
           <div className="flex items-center h-16 flex-shrink-0 px-6 border-b border-gray-200 justify-between">
             {!sidebarCollapsed && (
               <h1 className="text-2xl font-bold font-heading tracking-tight">
-                Flowops
+                Stackless
               </h1>
             )}
             {sidebarCollapsed && (
@@ -666,7 +676,7 @@ const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
 
                 {settingsMenuOpen && !sidebarCollapsed && (
                   <div className="mt-1 ml-4 space-y-1">
-                    {settingsMenuItems.map((item) => {
+                    {visibleSettingsItems.map((item) => {
                       const Icon = item.icon;
                       const active = isActive(item.href);
                       return (
@@ -758,7 +768,7 @@ const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
               </div>
               <div className="flex items-center h-16 flex-shrink-0 px-6 border-b border-gray-200">
                 <h1 className="text-2xl font-bold font-heading tracking-tight">
-                  Flowops
+                  Stackless
                 </h1>
               </div>
               <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
@@ -1120,7 +1130,7 @@ const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
 
                     {settingsMenuOpen && (
                       <div className="mt-1 ml-4 space-y-1">
-                        {settingsMenuItems.map((item) => {
+                        {visibleSettingsItems.map((item) => {
                           const Icon = item.icon;
                           const active = isActive(item.href);
                           return (
