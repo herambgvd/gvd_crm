@@ -7,6 +7,9 @@ from typing import List, Optional
 from pathlib import Path
 import uuid
 import shutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 from core.permissions import require_permission
 from core.auth import get_current_user
@@ -67,7 +70,8 @@ async def upload_lead_document(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Could not save file: {str(e)}")
+        logger.exception(f"Could not save file: {e}")
+        raise HTTPException(status_code=500, detail="Operation failed. Please try again.")
     finally:
         file.file.close()
 

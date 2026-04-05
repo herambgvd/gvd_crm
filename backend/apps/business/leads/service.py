@@ -89,44 +89,26 @@ class LeadService(BaseCRUDService):
 
         total = await col.count_documents(base)
 
-        all_statuses = [
-            "new_lead", "under_review", "solution_design", "proposal_submitted",
-            "under_negotiation", "poc_evaluation", "price_finalization", "pi_issued",
-            "order_won", "order_processing", "project_execution", "project_completed",
-            "lost",
+        # Single aggregation for state counts
+        pipeline = [
+            {"$match": base},
+            {"$group": {"_id": "$current_state_name", "count": {"$sum": 1}}},
         ]
-        by_status = {}
-        for s in all_statuses:
-            by_status[s] = await col.count_documents({**base, "status": s})
+        state_results = await col.aggregate(pipeline).to_list(50)
+        by_state = {r["_id"]: r["count"] for r in state_results if r["_id"]}
 
         # Pipeline value
-        pipeline = [
+        value_pipeline = [
             {"$match": {**base, "expected_value": {"$exists": True, "$ne": None}}},
-            {"$group": {"_id": None, "total_value": {"$sum": "$expected_value"}}},
+            {"$group": {"_id": None, "total_value": {"$sum": {"$toDouble": {"$ifNull": ["$expected_value", 0]}}}}},
         ]
-        value_result = await col.aggregate(pipeline).to_list(1)
+        value_result = await col.aggregate(value_pipeline).to_list(1)
         total_value = value_result[0]["total_value"] if value_result else 0
-
-        # By priority
-        priority_pipeline = [
-            {"$match": base},
-            {"$group": {"_id": "$priority", "count": {"$sum": 1}}},
-        ]
-        by_priority = {
-            doc["_id"]: doc["count"]
-            for doc in await col.aggregate(priority_pipeline).to_list(10)
-            if doc["_id"]
-        }
-
-        won = by_status.get("order_won", 0) + by_status.get("order_processing", 0) + \
-              by_status.get("project_execution", 0) + by_status.get("project_completed", 0)
 
         return {
             "total": total,
-            "by_status": by_status,
-            "by_priority": by_priority,
-            "pipeline_value": float(total_value),
-            "conversion_rate": round((won / total * 100), 1) if total > 0 else 0,
+            "by_state": by_state,
+            "pipeline_value": total_value,
         }
 
 

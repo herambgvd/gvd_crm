@@ -15,6 +15,9 @@ from pathlib import Path
 import uuid
 import csv
 import io
+import logging
+
+logger = logging.getLogger(__name__)
 
 from core.permissions import require_permission
 from apps.authentication.models import User
@@ -617,7 +620,8 @@ async def transfer_product_stock(
         )
         return _product_response(doc)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(f"Stock transfer failed: {e}")
+        raise HTTPException(status_code=400, detail="Stock transfer failed. Please check quantities and try again.")
 
 
 # ──────────────── Single Product Routes ─────────────────

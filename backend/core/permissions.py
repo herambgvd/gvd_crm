@@ -65,12 +65,6 @@ DEFAULT_PERMISSIONS = [
     {"name": "Stock In", "codename": "inventory:stock_in", "resource": "inventory", "action": "stock_in"},
     {"name": "Stock Out", "codename": "inventory:stock_out", "resource": "inventory", "action": "stock_out"},
     {"name": "Adjust Stock", "codename": "inventory:adjust", "resource": "inventory", "action": "adjust"},
-    # Enquiries
-    {"name": "View Enquiries", "codename": "enquiries:view", "resource": "enquiries", "action": "view"},
-    {"name": "Create Enquiries", "codename": "enquiries:create", "resource": "enquiries", "action": "create"},
-    {"name": "Edit Enquiries", "codename": "enquiries:edit", "resource": "enquiries", "action": "edit"},
-    {"name": "Delete Enquiries", "codename": "enquiries:delete", "resource": "enquiries", "action": "delete"},
-    {"name": "Convert Enquiries", "codename": "enquiries:convert", "resource": "enquiries", "action": "convert"},
     # Leads
     {"name": "View Leads", "codename": "leads:view", "resource": "leads", "action": "view"},
     {"name": "Create Leads", "codename": "leads:create", "resource": "leads", "action": "create"},

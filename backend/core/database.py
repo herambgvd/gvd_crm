@@ -146,14 +146,6 @@ class DatabaseManager:
             await self.database.permissions.create_index("codename", unique=True)
             await self.database.permissions.create_index([("resource", 1), ("action", 1)], unique=True)
             
-            # Enquiry indexes (for upcoming enquiry module)
-            await self.database.enquiries.create_index([("created_at", -1)])
-            await self.database.enquiries.create_index("status")
-            await self.database.enquiries.create_index("created_by")
-            await self.database.enquiries.create_index([("project_name", "text"), ("details", "text")])
-            await self.database.enquiry_remarks.create_index("enquiry_id")
-            await self.database.enquiry_comments.create_index("enquiry_id")
-            
             # Team indexes
             await self.database.teams.create_index("name", unique=True)
             await self.database.teams.create_index("leader_id")
@@ -231,6 +223,22 @@ class DatabaseManager:
             await self.database.grn_records.create_index("in_transit_id")
             await self.database.grn_records.create_index([("created_at", -1)])
             
+            # Workflow engine indexes on existing collections
+            await self.database.leads.create_index("sop_id")
+            await self.database.leads.create_index("current_state_id")
+            await self.database.tickets.create_index("sop_id")
+            await self.database.tickets.create_index("current_state_id")
+            await self.database.factory_orders.create_index("sop_id")
+            await self.database.factory_orders.create_index("current_state_id")
+            await self.database.rma_records.create_index("sop_id")
+            await self.database.rma_records.create_index("current_state_id")
+            await self.database.sales_orders.create_index("sop_id")
+            await self.database.sales_orders.create_index("current_state_id")
+            await self.database.purchase_orders.create_index("sop_id")
+            await self.database.purchase_orders.create_index("current_state_id")
+            await self.database.boqs.create_index("sop_id")
+            await self.database.boqs.create_index("current_state_id")
+
             # ─── Workflow Engine (SOP) Indexes ───
             await self.database.sop_workflows.create_index([("module", 1), ("is_active", 1)])
             await self.database.sop_workflows.create_index("id", unique=True)

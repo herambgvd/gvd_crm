@@ -105,9 +105,10 @@ class UserService:
                 detail=str(ve)
             )
         except Exception as e:
+            logger.exception(f"Failed to create user: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to create user: {str(e)}"
+                detail="Operation failed. Please try again."
             )
     
     async def update_user(self, user_id: str, user_data: UserUpdate) -> User:
@@ -175,9 +176,10 @@ class UserService:
             # Re-raise HTTP exceptions as they are
             raise
         except Exception as e:
+            logger.exception(f"Failed to update user: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to update user: {str(e)}"
+                detail="Operation failed. Please try again."
             )
     
     async def change_password(self, user_id: str, password_data: PasswordChangeRequest) -> bool:

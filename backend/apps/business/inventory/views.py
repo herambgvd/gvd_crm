@@ -9,6 +9,9 @@ Pipeline: Factory Order -> In-Transit -> Receive (splits to Main stock)
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 from core.permissions import require_permission
 from apps.authentication.models import User
@@ -105,7 +108,8 @@ async def create_factory_order(
         doc = await factory_order_service.create_order(data.model_dump(), user_id=current_user.id)
         return _factory_order_response(doc)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(f"Operation failed: {e}")
+        raise HTTPException(status_code=400, detail="Operation failed. Please try again.")
 
 
 @router.get("/factory-orders")
@@ -211,7 +215,8 @@ async def create_shipment(
         doc = await in_transit_service.create_shipment(data.model_dump(), user_id=current_user.id)
         return _in_transit_response(doc)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(f"Operation failed: {e}")
+        raise HTTPException(status_code=400, detail="Operation failed. Please try again.")
 
 
 @router.get("/in-transit")
@@ -270,7 +275,8 @@ async def receive_shipment_full(
         )
         return _in_transit_response(doc)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(f"Operation failed: {e}")
+        raise HTTPException(status_code=400, detail="Operation failed. Please try again.")
 
 
 @router.post("/in-transit/{shipment_id}/partial-receive", response_model=InTransitResponse)
@@ -289,7 +295,8 @@ async def receive_shipment_partial(
         )
         return _in_transit_response(doc)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(f"Operation failed: {e}")
+        raise HTTPException(status_code=400, detail="Operation failed. Please try again.")
 
 
 @router.delete("/in-transit/{shipment_id}")
@@ -343,7 +350,8 @@ async def transfer_stock(
             },
         }
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(f"Operation failed: {e}")
+        raise HTTPException(status_code=400, detail="Operation failed. Please try again.")
 
 
 # =======================================================================
@@ -399,7 +407,8 @@ async def create_demand_forecast(
         doc = await demand_forecast_service.create_forecast(data.model_dump(), user_id=current_user.id)
         return _forecast_response(doc)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(f"Operation failed: {e}")
+        raise HTTPException(status_code=400, detail="Operation failed. Please try again.")
 
 
 @router.get("/demand-forecasts")
@@ -460,7 +469,8 @@ async def convert_forecast_to_factory_order(
         )
         return _factory_order_response(doc)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(f"Operation failed: {e}")
+        raise HTTPException(status_code=400, detail="Operation failed. Please try again.")
 
 
 @router.delete("/demand-forecasts/{forecast_id}")
@@ -487,7 +497,8 @@ async def create_rma(
         doc = await rma_service.create_rma(data.model_dump(), user_id=current_user.id)
         return _rma_response(doc)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(f"Operation failed: {e}")
+        raise HTTPException(status_code=400, detail="Operation failed. Please try again.")
 
 
 @router.get("/rma")
@@ -603,7 +614,8 @@ async def return_rma_to_stock(
             raise HTTPException(status_code=404, detail="RMA not found")
         return _rma_response(doc)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(f"Operation failed: {e}")
+        raise HTTPException(status_code=400, detail="Operation failed. Please try again.")
 
 
 @router.post("/rma/{rma_id}/return-to-customer", response_model=RMAResponse)
@@ -624,7 +636,8 @@ async def return_rma_to_customer(
             raise HTTPException(status_code=404, detail="RMA not found")
         return _rma_response(doc)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(f"Operation failed: {e}")
+        raise HTTPException(status_code=400, detail="Operation failed. Please try again.")
 
 
 @router.post("/rma/{rma_id}/scrap", response_model=RMAResponse)
@@ -640,4 +653,5 @@ async def scrap_rma_item(
             raise HTTPException(status_code=404, detail="RMA not found")
         return _rma_response(doc)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(f"Operation failed: {e}")
+        raise HTTPException(status_code=400, detail="Operation failed. Please try again.")

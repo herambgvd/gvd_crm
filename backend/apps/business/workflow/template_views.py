@@ -5,6 +5,9 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 import uuid
 import shutil
+import logging
+
+logger = logging.getLogger(__name__)
 
 from core.auth import get_current_user
 from core.permissions import require_permission
@@ -265,7 +268,8 @@ async def upload_template_header(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Could not save file: {str(e)}")
+        logger.exception(f"Could not save file: {e}")
+        raise HTTPException(status_code=500, detail="Operation failed. Please try again.")
     finally:
         file.file.close()
 
@@ -302,7 +306,8 @@ async def upload_template_footer(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Could not save file: {str(e)}")
+        logger.exception(f"Could not save file: {e}")
+        raise HTTPException(status_code=500, detail="Operation failed. Please try again.")
     finally:
         file.file.close()
 

@@ -56,13 +56,16 @@ async def get_dashboard_stats(current_user = Depends(get_current_user)):
     sales_orders_count = await db.sales_orders.count_documents({})
     tickets_count = await db.tickets.count_documents({}) if "tickets" in await db.list_collection_names() else 0
     
-    # Calculate revenue (from sales orders)
-    sales_orders = await db.sales_orders.find({}, {"total_amount": 1}).to_list(1000)
-    total_revenue = sum(float(order.get("total_amount", 0)) for order in sales_orders)
-    
-    # Get recent activity counts
-    active_leads = await db.leads.count_documents({"status": {"$in": ["new", "contacted", "qualified"]}})
-    pending_orders = await db.sales_orders.count_documents({"status": {"$in": ["pending", "processing"]}})
+    # Calculate revenue (aggregation pipeline instead of loading all records)
+    revenue_result = await db.sales_orders.aggregate([
+        {"$match": {"is_deleted": {"$ne": True}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$toDouble": {"$ifNull": ["$total_amount", 0]}}}}},
+    ]).to_list(1)
+    total_revenue = revenue_result[0]["total"] if revenue_result else 0
+
+    # Get activity counts (SOP-agnostic — no hardcoded status values)
+    active_leads = await db.leads.count_documents({"is_deleted": {"$ne": True}})
+    pending_orders = await db.sales_orders.count_documents({"is_deleted": {"$ne": True}})
     
     # Calculate percentage changes (mock data for now)
     return {

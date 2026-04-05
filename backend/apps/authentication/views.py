@@ -1,6 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Form
 from typing import List
 from datetime import datetime, timezone, timedelta
+import logging
+
+logger = logging.getLogger(__name__)
 
 from core.auth import get_current_user, get_current_superuser, auth_service
 from core.permissions import require_permission
@@ -265,9 +268,10 @@ async def update_user_password(
     try:
         validate_password_strength(new_password)
     except ValueError as e:
+        logger.exception(f"Password validation failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail="Operation failed. Please try again."
         )
     
     # Update password
