@@ -7,6 +7,7 @@ import "./App.css";
 // Auth context
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import NotFound from "./components/common/NotFound";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 
 // Module imports — each module barrel exports its pages
 import { Login } from "./modules/auth";
@@ -67,6 +68,7 @@ const queryClient = new QueryClient({
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
+      staleTime: 2 * 60 * 1000, // 2 minutes
     },
   },
 });
@@ -109,6 +111,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
+          <ErrorBoundary>
           <Routes>
             {/* Auth */}
             <Route
@@ -761,6 +764,7 @@ function App() {
             {/* 404 catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </ErrorBoundary>
         </BrowserRouter>
         <Toaster position="top-right" richColors />
       </AuthProvider>

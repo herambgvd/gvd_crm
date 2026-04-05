@@ -54,8 +54,8 @@ class Settings:
     # CORS Configuration — defaults to localhost dev only; set CORS_ORIGINS in .env for production
     CORS_ORIGINS: List[str] = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
     CORS_ALLOW_CREDENTIALS: bool = True
-    CORS_ALLOW_METHODS: List[str] = ["*"]
-    CORS_ALLOW_HEADERS: List[str] = ["*"]
+    CORS_ALLOW_METHODS: List[str] = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+    CORS_ALLOW_HEADERS: List[str] = ["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"]
     
     # File Upload Configuration
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", str(ROOT_DIR / "uploads"))
@@ -99,6 +99,9 @@ class Settings:
     # Monitoring
     SENTRY_DSN: Optional[str] = os.getenv("SENTRY_DSN")
     
+    # Base URL for frontend links in emails etc.
+    BASE_URL: str = os.getenv("BASE_URL", "http://localhost:3000")
+
     # Business Logic Settings
     DEFAULT_CURRENCY: str = os.getenv("DEFAULT_CURRENCY", "USD")
     DEFAULT_TIMEZONE: str = os.getenv("DEFAULT_TIMEZONE", "UTC")

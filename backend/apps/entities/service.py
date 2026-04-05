@@ -2,6 +2,8 @@
 Entity Service — uses BaseCRUDService for consistent patterns
 """
 
+import re
+
 from core.base_service import BaseCRUDService
 
 
@@ -27,16 +29,17 @@ class EntityService(BaseCRUDService):
         if status:
             query["status"] = status
         if city:
-            query["city"] = {"$regex": city, "$options": "i"}
+            query["city"] = {"$regex": re.escape(city), "$options": "i"}
         if state:
-            query["state"] = {"$regex": state, "$options": "i"}
+            query["state"] = {"$regex": re.escape(state), "$options": "i"}
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"company_name": {"$regex": search, "$options": "i"}},
-                {"contact_person": {"$regex": search, "$options": "i"}},
-                {"email": {"$regex": search, "$options": "i"}},
-                {"phone": {"$regex": search, "$options": "i"}},
-                {"gstin": {"$regex": search, "$options": "i"}},
+                {"company_name": {"$regex": escaped, "$options": "i"}},
+                {"contact_person": {"$regex": escaped, "$options": "i"}},
+                {"email": {"$regex": escaped, "$options": "i"}},
+                {"phone": {"$regex": escaped, "$options": "i"}},
+                {"gstin": {"$regex": escaped, "$options": "i"}},
             ]
 
         from core.pagination import paginate
@@ -55,9 +58,10 @@ class EntityService(BaseCRUDService):
         if entity_type:
             query["entity_type"] = entity_type
         if term:
+            escaped = re.escape(term)
             query["$or"] = [
-                {"company_name": {"$regex": term, "$options": "i"}},
-                {"contact_person": {"$regex": term, "$options": "i"}},
+                {"company_name": {"$regex": escaped, "$options": "i"}},
+                {"contact_person": {"$regex": escaped, "$options": "i"}},
             ]
 
         docs = (
@@ -76,9 +80,10 @@ class EntityService(BaseCRUDService):
             "entity_type": entity_type,
         }
         if term:
+            escaped = re.escape(term)
             query["$or"] = [
-                {"company_name": {"$regex": term, "$options": "i"}},
-                {"contact_person": {"$regex": term, "$options": "i"}},
+                {"company_name": {"$regex": escaped, "$options": "i"}},
+                {"contact_person": {"$regex": escaped, "$options": "i"}},
             ]
 
         docs = (

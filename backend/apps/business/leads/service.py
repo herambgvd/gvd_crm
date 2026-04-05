@@ -7,6 +7,7 @@ from core.base_service import BaseCRUDService, serialize_document
 from core.database import get_database
 from core.pagination import paginate
 from datetime import datetime, timezone
+import re
 import uuid
 
 
@@ -61,10 +62,11 @@ class LeadService(BaseCRUDService):
         if current_state_id:
             query["current_state_id"] = current_state_id
         if search:
+            escaped = re.escape(search)
             search_filter = [
-                {"project_name": {"$regex": search, "$options": "i"}},
-                {"source": {"$regex": search, "$options": "i"}},
-                {"notes": {"$regex": search, "$options": "i"}},
+                {"project_name": {"$regex": escaped, "$options": "i"}},
+                {"source": {"$regex": escaped, "$options": "i"}},
+                {"notes": {"$regex": escaped, "$options": "i"}},
             ]
             # Merge search $or with access $or if both present
             if "$or" in query:

@@ -1,6 +1,22 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
+import re as regex_module
+
+
+def validate_password_strength(password: str) -> str:
+    """Validate password meets complexity requirements."""
+    if len(password) < 12:
+        raise ValueError("Password must be at least 12 characters")
+    if not regex_module.search(r"[A-Z]", password):
+        raise ValueError("Password must contain at least one uppercase letter")
+    if not regex_module.search(r"[a-z]", password):
+        raise ValueError("Password must contain at least one lowercase letter")
+    if not regex_module.search(r"\d", password):
+        raise ValueError("Password must contain at least one number")
+    if not regex_module.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        raise ValueError("Password must contain at least one special character")
+    return password
 
 # Authentication Schemas
 class LoginRequest(BaseModel):
@@ -26,7 +42,7 @@ class RefreshTokenRequest(BaseModel):
 class UserCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Full name")
     email: EmailStr = Field(..., description="Email address")
-    password: str = Field(..., min_length=6, max_length=100, description="Password")
+    password: str = Field(..., min_length=12, max_length=100, description="Password")
     phone: Optional[str] = Field(None, description="Phone number")
     department: Optional[str] = Field(None, description="Department")
     designation: Optional[str] = Field(None, description="Job designation")
@@ -151,8 +167,8 @@ class UserResponse(BaseModel):
         )
 
 class PasswordChangeRequest(BaseModel):
-    current_password: str = Field(..., min_length=6)
-    new_password: str = Field(..., min_length=6, max_length=100)
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=12, max_length=100)
 
 class PasswordResetRequest(BaseModel):
     email: EmailStr

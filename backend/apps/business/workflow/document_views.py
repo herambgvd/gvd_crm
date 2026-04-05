@@ -6,9 +6,12 @@ from pydantic import BaseModel, Field
 import uuid
 import shutil
 
+import re
+
 from core.auth import get_current_user
 from core.permissions import require_permission
 from core.database import get_database
+from core.file_utils import validate_upload, safe_filename
 from apps.authentication.models import User
 
 router = APIRouter(tags=["documents"])
@@ -36,9 +39,10 @@ async def get_documents(
     if category:
         filter_dict['category'] = category
     if search:
+        escaped = re.escape(search)
         filter_dict['$or'] = [
-            {'name': {'$regex': search, '$options': 'i'}},
-            {'description': {'$regex': search, '$options': 'i'}},
+            {'name': {'$regex': escaped, '$options': 'i'}},
+            {'description': {'$regex': escaped, '$options': 'i'}},
         ]
 
     documents = await db.documents.find(filter_dict, {'_id': 0}).sort(
@@ -66,11 +70,12 @@ async def upload_document(
     """Upload a new document"""
     db = get_database()
 
+    await validate_upload(file)
+
     upload_dir = Path("uploads/documents")
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    file_extension = Path(file.filename).suffix
-    unique_filename = f"{uuid.uuid4()}{file_extension}"
+    unique_filename = safe_filename(file.filename)
     file_path = upload_dir / unique_filename
 
     try:

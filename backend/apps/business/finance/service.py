@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional
 from decimal import Decimal
 from datetime import datetime, timezone
 
+import re
+
 from core.base_service import BaseCRUDService, serialize_document
 from core.database import get_database
 
@@ -89,9 +91,10 @@ class InvoiceService(BaseCRUDService):
         if entity_id:
             query["entity_id"] = entity_id
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"invoice_number": {"$regex": search, "$options": "i"}},
-                {"notes": {"$regex": search, "$options": "i"}},
+                {"invoice_number": {"$regex": escaped, "$options": "i"}},
+                {"notes": {"$regex": escaped, "$options": "i"}},
             ]
         return await self.list(query=query, page=page, page_size=page_size, sort=[(sort_by, sort_order)])
 
@@ -138,10 +141,11 @@ class PaymentService(BaseCRUDService):
         if payment_method:
             query["payment_method"] = payment_method
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"payment_reference": {"$regex": search, "$options": "i"}},
-                {"transaction_id": {"$regex": search, "$options": "i"}},
-                {"notes": {"$regex": search, "$options": "i"}},
+                {"payment_reference": {"$regex": escaped, "$options": "i"}},
+                {"transaction_id": {"$regex": escaped, "$options": "i"}},
+                {"notes": {"$regex": escaped, "$options": "i"}},
             ]
         return await self.list(query=query, page=page, page_size=page_size, sort=[(sort_by, sort_order)])
 

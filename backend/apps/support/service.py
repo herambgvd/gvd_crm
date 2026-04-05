@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 from core.base_service import BaseCRUDService, serialize_document
 from core.database import get_database
 from datetime import datetime, timezone
+import re
 import uuid
 
 
@@ -66,13 +67,14 @@ class TicketService(BaseCRUDService):
         if current_state_id:
             query["current_state_id"] = current_state_id
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"title": {"$regex": search, "$options": "i"}},
-                {"description": {"$regex": search, "$options": "i"}},
-                {"ticket_number": {"$regex": search, "$options": "i"}},
-                {"customer_name": {"$regex": search, "$options": "i"}},
-                {"product_name": {"$regex": search, "$options": "i"}},
-                {"project_name": {"$regex": search, "$options": "i"}},
+                {"title": {"$regex": escaped, "$options": "i"}},
+                {"description": {"$regex": escaped, "$options": "i"}},
+                {"ticket_number": {"$regex": escaped, "$options": "i"}},
+                {"customer_name": {"$regex": escaped, "$options": "i"}},
+                {"product_name": {"$regex": escaped, "$options": "i"}},
+                {"project_name": {"$regex": escaped, "$options": "i"}},
             ]
 
         return await self.list(
@@ -232,10 +234,11 @@ class IssueLoggingService(BaseCRUDService):
         if status:
             query["status"] = status
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"title": {"$regex": search, "$options": "i"}},
-                {"description": {"$regex": search, "$options": "i"}},
-                {"issue_number": {"$regex": search, "$options": "i"}},
+                {"title": {"$regex": escaped, "$options": "i"}},
+                {"description": {"$regex": escaped, "$options": "i"}},
+                {"issue_number": {"$regex": escaped, "$options": "i"}},
             ]
         return await self.list(query=query, page=page, page_size=page_size)
 
@@ -350,10 +353,11 @@ class CustomerFeedbackService(BaseCRUDService):
         if status:
             query["status"] = status
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"subject": {"$regex": search, "$options": "i"}},
-                {"message": {"$regex": search, "$options": "i"}},
-                {"customer_name": {"$regex": search, "$options": "i"}},
+                {"subject": {"$regex": escaped, "$options": "i"}},
+                {"message": {"$regex": escaped, "$options": "i"}},
+                {"customer_name": {"$regex": escaped, "$options": "i"}},
             ]
         return await self.list(query=query, page=page, page_size=page_size)
 
@@ -396,9 +400,10 @@ class KnowledgeBaseService(BaseCRUDService):
         if category:
             query["category"] = category
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"title": {"$regex": search, "$options": "i"}},
-                {"content": {"$regex": search, "$options": "i"}},
+                {"title": {"$regex": escaped, "$options": "i"}},
+                {"content": {"$regex": escaped, "$options": "i"}},
             ]
         return await self.list(
             query=query, page=page, page_size=page_size,

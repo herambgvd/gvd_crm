@@ -11,6 +11,7 @@ import logging
 import uuid
 from datetime import datetime, timezone, timedelta
 
+from core.config import settings
 from core.database import get_database
 
 logger = logging.getLogger(__name__)
@@ -98,7 +99,7 @@ async def send_welcome_email(
     verification_url = ""
     if verification_token:
         # TODO: Get base URL from config
-        verification_url = f"http://localhost:3000/verify-email?token={verification_token}"
+        verification_url = f"{settings.BASE_URL}/verify-email?token={verification_token}"
     
     subject = f"Welcome to {platform_name} - Your Account Details"
     
@@ -173,7 +174,7 @@ async def send_welcome_email(
                                 <table cellpadding="0" cellspacing="0" width="100%">
                                     <tr>
                                         <td align="center" style="padding: 10px 0 30px;">
-                                            <a href="http://localhost:3000/login" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+                                            <a href="{settings.BASE_URL}/login" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
                                                 Login to Your Account
                                             </a>
                                         </td>
@@ -216,7 +217,7 @@ async def send_welcome_email(
     Email: {user_email}
     Password: {password}
     
-    Please log in at: http://localhost:3000/login
+    Please log in at: {settings.BASE_URL}/login
     
     For your security, please change your password after your first login.
     

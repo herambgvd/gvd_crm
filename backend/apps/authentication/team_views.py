@@ -5,6 +5,7 @@ Team Views — CRUD for team management
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional, List
 from datetime import datetime, timezone
+import re
 import uuid
 
 from core.auth import get_current_user
@@ -53,9 +54,10 @@ async def list_teams(
     query = {"is_deleted": {"$ne": True}}
 
     if search:
+        escaped = re.escape(search)
         query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"department": {"$regex": search, "$options": "i"}},
+            {"name": {"$regex": escaped, "$options": "i"}},
+            {"department": {"$regex": escaped, "$options": "i"}},
         ]
 
     total = await db.teams.count_documents(query)

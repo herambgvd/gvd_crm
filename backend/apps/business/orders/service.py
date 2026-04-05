@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional
 from decimal import Decimal
 from datetime import datetime, timezone
 
+import re
+
 from core.base_service import BaseCRUDService, serialize_document
 from core.database import get_database
 
@@ -137,10 +139,11 @@ class BOQService(BaseCRUDService):
         if entity_id:
             query["entity_id"] = entity_id
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"name": {"$regex": search, "$options": "i"}},
-                {"description": {"$regex": search, "$options": "i"}},
-                {"project_name": {"$regex": search, "$options": "i"}},
+                {"name": {"$regex": escaped, "$options": "i"}},
+                {"description": {"$regex": escaped, "$options": "i"}},
+                {"project_name": {"$regex": escaped, "$options": "i"}},
             ]
         return await self.list(query=query, page=page, page_size=page_size, sort=[(sort_by, sort_order)])
 
@@ -228,9 +231,10 @@ class SalesOrderService(BaseCRUDService):
         if assigned_to:
             query["assigned_to"] = assigned_to
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"order_number": {"$regex": search, "$options": "i"}},
-                {"notes": {"$regex": search, "$options": "i"}},
+                {"order_number": {"$regex": escaped, "$options": "i"}},
+                {"notes": {"$regex": escaped, "$options": "i"}},
             ]
         return await self.list(query=query, page=page, page_size=page_size, sort=[(sort_by, sort_order)])
 
@@ -297,9 +301,10 @@ class PurchaseOrderService(BaseCRUDService):
         if vendor_id:
             query["vendor_id"] = vendor_id
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"po_number": {"$regex": search, "$options": "i"}},
-                {"notes": {"$regex": search, "$options": "i"}},
+                {"po_number": {"$regex": escaped, "$options": "i"}},
+                {"notes": {"$regex": escaped, "$options": "i"}},
             ]
         return await self.list(query=query, page=page, page_size=page_size, sort=[(sort_by, sort_order)])
 

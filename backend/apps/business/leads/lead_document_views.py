@@ -11,6 +11,7 @@ import shutil
 from core.permissions import require_permission
 from core.auth import get_current_user
 from core.database import get_database
+from core.file_utils import validate_upload, safe_filename
 from apps.authentication.models import User
 from .schemas import LeadDocumentResponse
 from .service import lead_document_service, lead_service
@@ -57,9 +58,9 @@ async def upload_lead_document(
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
-    # Save file
-    file_extension = file.filename.split(".")[-1] if "." in file.filename else ""
-    filename = f"{uuid.uuid4()}.{file_extension}" if file_extension else str(uuid.uuid4())
+    # Validate and save file
+    await validate_upload(file)
+    filename = safe_filename(file.filename)
     file_path = UPLOAD_DIR / filename
 
     try:

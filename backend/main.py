@@ -66,6 +66,10 @@ _rate_limit_store: dict = defaultdict(lambda: {"count": 0, "window_start": time.
 def _rate_limit_check(client_ip: str, limit: int = 60) -> bool:
     """Returns True if request is allowed, False if rate limit exceeded."""
     now = time.time()
+    # Cleanup stale entries to prevent memory leak
+    stale = [ip for ip, b in _rate_limit_store.items() if now - b["window_start"] > 120]
+    for ip in stale:
+        del _rate_limit_store[ip]
     bucket = _rate_limit_store[client_ip]
     if now - bucket["window_start"] > 60:
         bucket["count"] = 0

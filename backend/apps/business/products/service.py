@@ -8,6 +8,7 @@ from core.base_service import BaseCRUDService, serialize_document
 from core.database import get_database
 from core.pagination import paginate
 from datetime import datetime, timezone
+import re
 import uuid
 
 
@@ -50,10 +51,11 @@ class ProductService(BaseCRUDService):
         if has_stock:
             query["total_quantity"] = {"$gt": 0}
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"name": {"$regex": search, "$options": "i"}},
-                {"sku": {"$regex": search, "$options": "i"}},
-                {"description": {"$regex": search, "$options": "i"}},
+                {"name": {"$regex": escaped, "$options": "i"}},
+                {"sku": {"$regex": escaped, "$options": "i"}},
+                {"description": {"$regex": escaped, "$options": "i"}},
             ]
 
         return await self.list(
@@ -348,7 +350,7 @@ class ProductCategoryService(BaseCRUDService):
         if is_active is not None:
             query["is_active"] = is_active
         if search:
-            query["name"] = {"$regex": search, "$options": "i"}
+            query["name"] = {"$regex": re.escape(search), "$options": "i"}
         if parent_only:
             query["$or"] = [
                 {"parent_category_id": None},
@@ -434,9 +436,10 @@ class MovementCategoryService(BaseCRUDService):
             query["$or"] = [{"is_active": True}, {"is_active": {"$exists": False}}]
             
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"name": {"$regex": search, "$options": "i"}},
-                {"code": {"$regex": search, "$options": "i"}},
+                {"name": {"$regex": escaped, "$options": "i"}},
+                {"code": {"$regex": escaped, "$options": "i"}},
             ]
         
         return await self.list(
@@ -579,11 +582,12 @@ class StockMovementService(BaseCRUDService):
         if status:
             query["status"] = status
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"uid": {"$regex": search, "$options": "i"}},
-                {"notes": {"$regex": search, "$options": "i"}},
-                {"location_from": {"$regex": search, "$options": "i"}},
-                {"location_to": {"$regex": search, "$options": "i"}},
+                {"uid": {"$regex": escaped, "$options": "i"}},
+                {"notes": {"$regex": escaped, "$options": "i"}},
+                {"location_from": {"$regex": escaped, "$options": "i"}},
+                {"location_to": {"$regex": escaped, "$options": "i"}},
             ]
 
         return await self.list(

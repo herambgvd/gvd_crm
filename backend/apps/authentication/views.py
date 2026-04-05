@@ -256,10 +256,18 @@ async def update_user_password(
     
     # Validate password data
     new_password = password_data.get("new_password")
-    if not new_password or len(new_password) < 6:
+    if not new_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 6 characters long"
+            detail="Password is required"
+        )
+    from .schemas import validate_password_strength
+    try:
+        validate_password_strength(new_password)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
         )
     
     # Update password

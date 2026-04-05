@@ -2,12 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from typing import List, Optional
 from datetime import datetime, timezone
 import os
+import re
 import shutil
 from pathlib import Path
 
 from core.auth import get_current_user
 from core.permissions import require_permission
 from core.database import get_database
+from core.file_utils import validate_upload, safe_filename
 from .models import Comment, Remark, Document
 from .schemas import (
     DocumentCreate, DocumentUpdate, DocumentResponse,
@@ -45,11 +47,12 @@ async def get_documents(
         ]
     
     if search:
+        escaped = re.escape(search)
         filter_dict["$or"] = [
-            {"title": {"$regex": search, "$options": "i"}},
-            {"description": {"$regex": search, "$options": "i"}},
-            {"file_name": {"$regex": search, "$options": "i"}},
-            {"tags": {"$regex": search, "$options": "i"}}
+            {"title": {"$regex": escaped, "$options": "i"}},
+            {"description": {"$regex": escaped, "$options": "i"}},
+            {"file_name": {"$regex": escaped, "$options": "i"}},
+            {"tags": {"$regex": escaped, "$options": "i"}}
         ]
     
     documents = await db.documents.find(filter_dict).skip(skip).limit(limit).sort("created_at", -1).to_list(length=limit)
@@ -75,16 +78,17 @@ async def upload_document(
 ):
     """Upload new document"""
     
+    # Validate file upload
+    await validate_upload(file)
+
     # Create upload directory
     upload_dir = Path("uploads/documents")
     upload_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Generate unique filename
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    file_extension = Path(file.filename).suffix
-    unique_filename = f"{timestamp}_{file.filename}"
+
+    # Generate safe unique filename
+    unique_filename = safe_filename(file.filename)
     file_path = upload_dir / unique_filename
-    
+
     # Save file
     try:
         with open(file_path, "wb") as buffer:

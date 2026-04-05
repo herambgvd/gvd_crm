@@ -148,10 +148,11 @@ def build_search_filter(search_term: Optional[str], fields: list) -> Dict[str, A
         return {}
     
     # Create case-insensitive regex search across multiple fields
+    escaped = re.escape(search_term)
     search_conditions = []
     for field in fields:
         search_conditions.append({
-            field: {"$regex": search_term, "$options": "i"}
+            field: {"$regex": escaped, "$options": "i"}
         })
     
     return {"$or": search_conditions} if search_conditions else {}

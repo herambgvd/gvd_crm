@@ -7,6 +7,7 @@ Business logic for all inventory operations using BaseCRUDService pattern
 from typing import Any, Dict, List, Optional
 from decimal import Decimal
 from datetime import datetime, timezone
+import re
 import uuid
 
 from core.base_service import BaseCRUDService, serialize_document
@@ -165,15 +166,16 @@ class FactoryOrderService(BaseCRUDService):
         if status:
             query["status"] = status
         if factory_name:
-            query["factory_name"] = {"$regex": factory_name, "$options": "i"}
+            query["factory_name"] = {"$regex": re.escape(factory_name), "$options": "i"}
         if sop_id:
             query["sop_id"] = sop_id
         if current_state_id:
             query["current_state_id"] = current_state_id
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"order_number": {"$regex": search, "$options": "i"}},
-                {"factory_name": {"$regex": search, "$options": "i"}},
+                {"order_number": {"$regex": escaped, "$options": "i"}},
+                {"factory_name": {"$regex": escaped, "$options": "i"}},
             ]
 
         return await self.list(
@@ -327,10 +329,11 @@ class InTransitService(BaseCRUDService):
         if status:
             query["status"] = status
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"shipment_number": {"$regex": search, "$options": "i"}},
-                {"factory_order_number": {"$regex": search, "$options": "i"}},
-                {"tracking_number": {"$regex": search, "$options": "i"}},
+                {"shipment_number": {"$regex": escaped, "$options": "i"}},
+                {"factory_order_number": {"$regex": escaped, "$options": "i"}},
+                {"tracking_number": {"$regex": escaped, "$options": "i"}},
             ]
         
         return await self.list(
@@ -624,11 +627,12 @@ class StockMovementService(BaseCRUDService):
             else:
                 query["created_at"] = {"$lte": to_date.isoformat()}
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"product_name": {"$regex": search, "$options": "i"}},
-                {"product_sku": {"$regex": search, "$options": "i"}},
-                {"reference_number": {"$regex": search, "$options": "i"}},
-                {"reason": {"$regex": search, "$options": "i"}},
+                {"product_name": {"$regex": escaped, "$options": "i"}},
+                {"product_sku": {"$regex": escaped, "$options": "i"}},
+                {"reference_number": {"$regex": escaped, "$options": "i"}},
+                {"reason": {"$regex": escaped, "$options": "i"}},
             ]
         
         result = await self.list(

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Optional, Dict, Any
 from datetime import datetime
+import re
 
 from core.permissions import require_permission
 from apps.authentication.models import User
@@ -51,10 +52,11 @@ async def get_warehouses(
     
     # Add search filter
     if search:
+        escaped = re.escape(search)
         query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"unique_id": {"$regex": search, "$options": "i"}},
-            {"manager": {"$regex": search, "$options": "i"}},
+            {"name": {"$regex": escaped, "$options": "i"}},
+            {"unique_id": {"$regex": escaped, "$options": "i"}},
+            {"manager": {"$regex": escaped, "$options": "i"}},
         ]
     
     result = await warehouse_service.list(

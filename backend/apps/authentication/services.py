@@ -27,6 +27,16 @@ class UserService:
             
             # Store the plain password for welcome email before hashing
             plain_password = internal_data.get('password', '')
+
+            # Validate password strength
+            from .schemas import validate_password_strength
+            try:
+                validate_password_strength(plain_password)
+            except ValueError as ve:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(ve)
+                )
             
             # Validate required fields
             if not internal_data.get('email'):

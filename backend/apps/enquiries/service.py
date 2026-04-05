@@ -5,6 +5,7 @@ Uses BaseCRUDService for standard CRUD and adds enquiry-specific logic
 like auto-numbering, entity resolution, and lead conversion.
 """
 
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -124,12 +125,13 @@ class EnquiryService(BaseCRUDService):
         if assigned_to:
             query["assigned_to"] = assigned_to
         if search:
+            escaped = re.escape(search)
             query["$or"] = [
-                {"project_name": {"$regex": search, "$options": "i"}},
-                {"person_name": {"$regex": search, "$options": "i"}},
-                {"enquiry_number": {"$regex": search, "$options": "i"}},
-                {"person_email": {"$regex": search, "$options": "i"}},
-                {"details": {"$regex": search, "$options": "i"}},
+                {"project_name": {"$regex": escaped, "$options": "i"}},
+                {"person_name": {"$regex": escaped, "$options": "i"}},
+                {"enquiry_number": {"$regex": escaped, "$options": "i"}},
+                {"person_email": {"$regex": escaped, "$options": "i"}},
+                {"details": {"$regex": escaped, "$options": "i"}},
             ]
 
         return await paginate(
