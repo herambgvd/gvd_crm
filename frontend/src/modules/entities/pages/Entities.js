@@ -53,10 +53,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../../components/ui/select";
+import { ImportWizard } from "../../import-wizard";
 
 const Entities = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const [importOpen, setImportOpen] = React.useState(false);
 
   // Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -293,6 +296,10 @@ const Entities = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Upload className="mr-1.5 h-3.5 w-3.5" />
+              Import
+            </Button>
             <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
               <Upload className="mr-2 h-4 w-4" />
               Bulk Upload
@@ -791,6 +798,13 @@ const Entities = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      <ImportWizard
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        entityType="entity"
+        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["entities"] })}
+      />
     </Layout>
   );
 };

@@ -15,12 +15,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../../components/ui/alert-dialog";
-import { Plus, Search, Edit2, Trash2, Building2, Phone, Mail } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Building2, Phone, Mail, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { ImportWizard } from "../../import-wizard";
 
 const Customers = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [importOpen, setImportOpen] = React.useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -55,9 +57,15 @@ const Customers = () => {
             <h1 className="text-lg font-semibold">Customer Master</h1>
             <p className="text-sm text-gray-500">{total} customers total</p>
           </div>
-          <Button onClick={() => navigate("/customers/new")}>
-            <Plus className="mr-2 h-4 w-4" /> Add Customer
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Upload className="mr-1.5 h-3.5 w-3.5" />
+              Import
+            </Button>
+            <Button onClick={() => navigate("/customers/new")}>
+              <Plus className="mr-2 h-4 w-4" /> Add Customer
+            </Button>
+          </div>
         </div>
 
         {/* Search */}
@@ -186,6 +194,13 @@ const Customers = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ImportWizard
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        entityType="customer"
+        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["customers"] })}
+      />
     </Layout>
   );
 };

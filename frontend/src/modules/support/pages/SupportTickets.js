@@ -26,6 +26,7 @@ import {
   ChevronLeft,
   ChevronRight,
   TicketIcon,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -43,11 +44,13 @@ import {
   StateStatsBar,
   TransitionActions,
 } from "../../workflow-engine";
+import { ImportWizard } from "../../import-wizard";
 
 const SupportTickets = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const [importOpen, setImportOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [ticketToDelete, setTicketToDelete] = useState(null);
   const [searchInput, setSearchInput] = useState("");
@@ -165,10 +168,16 @@ const SupportTickets = () => {
               Manage technical support tickets and track resolution progress
             </p>
           </div>
-          <Button onClick={() => navigate("/support/tickets/new")}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Ticket
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Upload className="mr-1.5 h-3.5 w-3.5" />
+              Import
+            </Button>
+            <Button onClick={() => navigate("/support/tickets/new")}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Ticket
+            </Button>
+          </div>
         </div>
 
         {/* Dynamic Stats Cards from Workflow Engine */}
@@ -375,6 +384,13 @@ const SupportTickets = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      <ImportWizard
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        entityType="ticket"
+        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["support-tickets"] })}
+      />
     </Layout>
   );
 };

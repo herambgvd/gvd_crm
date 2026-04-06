@@ -26,6 +26,7 @@ import {
   User,
   IndianRupee,
   TrendingUp,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -43,11 +44,13 @@ import {
   StateStatsBar,
   TransitionActions,
 } from "../../workflow-engine";
+import { ImportWizard } from "../../import-wizard";
 
 const Leads = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const [importOpen, setImportOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [leadToDelete, setLeadToDelete] = React.useState(null);
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -142,13 +145,19 @@ const Leads = () => {
               Manage your sales leads across all channels
             </p>
           </div>
-          <Button
-            onClick={() => navigate("/leads/new")}
-            data-testid="create-lead-btn"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            New Lead
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Upload className="mr-1.5 h-3.5 w-3.5" />
+              Import
+            </Button>
+            <Button
+              onClick={() => navigate("/leads/new")}
+              data-testid="create-lead-btn"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              New Lead
+            </Button>
+          </div>
         </div>
 
         {/* Dynamic Stats Cards from Workflow Engine */}
@@ -402,6 +411,13 @@ const Leads = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      <ImportWizard
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        entityType="lead"
+        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["leads"] })}
+      />
     </Layout>
   );
 };
