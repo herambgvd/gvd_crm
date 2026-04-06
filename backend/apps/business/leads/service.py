@@ -36,20 +36,10 @@ class LeadService(BaseCRUDService):
         """
         query: Dict[str, Any] = {}
 
-        # Access restriction: non-superusers see only their leads
-        if not is_superuser and current_user_id:
-            db = get_database()
-            assigned_lead_ids = [
-                doc["lead_id"]
-                async for doc in db.assignments.find(
-                    {"user_id": current_user_id, "is_deleted": {"$ne": True}},
-                    {"_id": 0, "lead_id": 1},
-                )
-            ]
-            query["$or"] = [
-                {"created_by": current_user_id},
-                {"id": {"$in": assigned_lead_ids}},
-            ]
+        # Access restriction: team-based data access control
+        from core.data_access import build_access_query, merge_access_filter
+        access_filter = await build_access_query(current_user_id, is_superuser)
+        query = merge_access_filter(query, access_filter)
 
         if status:
             query["status"] = status

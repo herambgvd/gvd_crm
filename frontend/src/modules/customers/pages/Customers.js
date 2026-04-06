@@ -15,7 +15,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../../components/ui/alert-dialog";
-import { Plus, Search, Edit2, Trash2, Building2, Phone, Mail, Upload } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  Building2,
+  Phone,
+  Mail,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ImportWizard } from "../../import-wizard";
 
@@ -41,7 +50,8 @@ const Customers = () => {
       setDeleteDialogOpen(false);
       setCustomerToDelete(null);
     },
-    onError: (err) => toast.error(err.response?.data?.detail || "Failed to delete"),
+    onError: (err) =>
+      toast.error(err.response?.data?.detail || "Failed to delete"),
   });
 
   const customers = data?.items || [];
@@ -50,33 +60,46 @@ const Customers = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold">Customer Master</h1>
-            <p className="text-sm text-gray-500">{total} customers total</p>
+      <div className="space-y-4">
+        {/* Header + Search */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-semibold">Customer Master</h1>
+              <p className="text-sm text-gray-500">{total} customers total</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setImportOpen(true)}
+              >
+                <Upload className="mr-1.5 h-3.5 w-3.5" />
+                Import
+              </Button>
+              <Button size="sm" onClick={() => navigate("/customers/new")}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" /> Add Customer
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-              <Upload className="mr-1.5 h-3.5 w-3.5" />
-              Import
-            </Button>
-            <Button onClick={() => navigate("/customers/new")}>
-              <Plus className="mr-2 h-4 w-4" /> Add Customer
-            </Button>
-          </div>
-        </div>
 
-        {/* Search */}
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search customers..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="pl-9"
-          />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <Input
+                placeholder="Search customers..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-8 h-8 text-sm"
+              />
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              Page {page} of {totalPages}
+            </span>
+          </div>
         </div>
 
         {/* Table */}
@@ -110,28 +133,38 @@ const Customers = () => {
                 {customers.map((c) => (
                   <tr key={c.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium">{c.company_name}</td>
-                    <td className="px-4 py-3 text-gray-600">{c.contact_person}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {c.contact_person}
+                    </td>
                     <td className="px-4 py-3 text-gray-600">
                       {c.phone ? (
                         <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />{c.phone}
+                          <Phone className="h-3 w-3" />
+                          {c.phone}
                         </span>
-                      ) : "—"}
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
                       {c.email ? (
                         <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />{c.email}
+                          <Mail className="h-3 w-3" />
+                          {c.email}
                         </span>
-                      ) : "—"}
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{c.city || "—"}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        c.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-600"
-                      }`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          c.status === "active"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
                         {c.status}
                       </span>
                     </td>
@@ -148,7 +181,10 @@ const Customers = () => {
                           size="sm"
                           variant="ghost"
                           className="text-red-500 hover:text-red-700"
-                          onClick={() => { setCustomerToDelete(c); setDeleteDialogOpen(true); }}
+                          onClick={() => {
+                            setCustomerToDelete(c);
+                            setDeleteDialogOpen(true);
+                          }}
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
@@ -164,10 +200,26 @@ const Customers = () => {
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>Page {page} of {totalPages}</span>
+            <span>
+              Page {page} of {totalPages}
+            </span>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Prev</Button>
-              <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Prev
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
             </div>
           </div>
         )}
@@ -179,7 +231,8 @@ const Customers = () => {
             <AlertDialogTitle>Delete Customer</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete{" "}
-              <strong>{customerToDelete?.company_name}</strong>? This action cannot be undone.
+              <strong>{customerToDelete?.company_name}</strong>? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -199,7 +252,9 @@ const Customers = () => {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         entityType="customer"
-        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["customers"] })}
+        onImportComplete={() =>
+          queryClient.invalidateQueries({ queryKey: ["customers"] })
+        }
       />
     </Layout>
   );

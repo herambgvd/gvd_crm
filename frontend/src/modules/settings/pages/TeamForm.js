@@ -2,7 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Layout } from "../../../components";
-import { fetchTeam, fetchUsers, createTeam, updateTeam } from "../api";
+import {
+  fetchTeam,
+  fetchUsers,
+  createTeam,
+  updateTeam,
+  fetchTeamGrants,
+  createTeamGrant,
+  revokeTeamGrant,
+} from "../api";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
@@ -12,6 +20,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "../../../components/ui/card";
 import {
   Select,
@@ -21,7 +30,7 @@ import {
   SelectValue,
 } from "../../../components/ui/select";
 import { Checkbox } from "../../../components/ui/checkbox";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 const TeamForm = () => {
@@ -118,6 +127,49 @@ const TeamForm = () => {
         ? prev.member_ids.filter((id) => id !== userIdStr)
         : [...prev.member_ids, userIdStr],
     }));
+  };
+
+  // ─── Data Access Grants ───────────────────────────────
+  const { data: grants = [], isLoading: grantsLoading } = useQuery({
+    queryKey: ["teamGrants", id],
+    queryFn: () => fetchTeamGrants(id),
+    enabled: isEdit,
+  });
+
+  const [grantForm, setGrantForm] = useState({ grantee_id: "", target_user_id: "" });
+
+  const createGrantMutation = useMutation({
+    mutationFn: () => createTeamGrant(id, grantForm.grantee_id, grantForm.target_user_id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["teamGrants", id]);
+      setGrantForm({ grantee_id: "", target_user_id: "" });
+      toast.success("Grant created");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.detail || "Failed to create grant");
+    },
+  });
+
+  const revokeGrantMutation = useMutation({
+    mutationFn: (grantId) => revokeTeamGrant(id, grantId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["teamGrants", id]);
+      toast.success("Grant revoked");
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.detail || "Failed to revoke grant");
+    },
+  });
+
+  // Build team member + leader list for grant dropdowns
+  const teamMemberOptions = users.filter((u) => {
+    const uid = String(u.id);
+    return formData.member_ids.includes(uid) || formData.leader_id === uid;
+  });
+
+  const getUserName = (userId) => {
+    const u = users.find((u) => String(u.id) === String(userId));
+    return u ? u.name || `${u.first_name} ${u.last_name}` : `User #${userId}`;
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
@@ -282,6 +334,110 @@ const TeamForm = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Data Sharing — only when editing */}
+          {isEdit && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Data Sharing</CardTitle>
+                <CardDescription className="text-xs">
+                  Allow team members to see each other's data
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Existing grants */}
+                {grantsLoading ? (
+                  <p className="text-xs text-muted-foreground">Loading grants...</p>
+                ) : grants.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No data sharing grants yet</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {grants.map((g) => (
+                      <div
+                        key={g.id}
+                        className="flex items-center justify-between bg-muted/50 rounded px-3 py-1.5"
+                      >
+                        <span className="text-xs">
+                          <span className="font-medium">{getUserName(g.grantee_id)}</span>
+                          {" "}&rarr; can see &rarr;{" "}
+                          <span className="font-medium">{getUserName(g.target_user_id)}</span>'s data
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-destructive hover:text-destructive"
+                          onClick={() => revokeGrantMutation.mutate(g.id)}
+                          disabled={revokeGrantMutation.isPending}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add grant form */}
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Label className="text-xs">Grantee (who can see)</Label>
+                    <Select
+                      value={grantForm.grantee_id}
+                      onValueChange={(val) =>
+                        setGrantForm((prev) => ({ ...prev, grantee_id: val }))
+                      }
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Select user" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teamMemberOptions.map((u) => (
+                          <SelectItem key={u.id} value={String(u.id)} className="text-xs">
+                            {u.name || `${u.first_name} ${u.last_name}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-xs">Target (whose data)</Label>
+                    <Select
+                      value={grantForm.target_user_id}
+                      onValueChange={(val) =>
+                        setGrantForm((prev) => ({ ...prev, target_user_id: val }))
+                      }
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Select user" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teamMemberOptions.map((u) => (
+                          <SelectItem key={u.id} value={String(u.id)} className="text-xs">
+                            {u.name || `${u.first_name} ${u.last_name}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={
+                      !grantForm.grantee_id ||
+                      !grantForm.target_user_id ||
+                      grantForm.grantee_id === grantForm.target_user_id ||
+                      createGrantMutation.isPending
+                    }
+                    onClick={() => createGrantMutation.mutate()}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-4">

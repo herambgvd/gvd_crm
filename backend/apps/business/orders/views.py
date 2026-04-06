@@ -36,6 +36,7 @@ async def get_boqs(
     return await boq_service.list_boqs(
         page=page, page_size=page_size,
         status=status, lead_id=lead_id, entity_id=entity_id, search=search,
+        current_user_id=current_user.id, is_superuser=current_user.is_superuser,
     )
 
 
@@ -151,6 +152,7 @@ async def get_sales_orders(
     return await sales_order_service.list_sales_orders(
         page=page, page_size=page_size,
         status=status, lead_id=lead_id, entity_id=entity_id, assigned_to=assigned_to, search=search,
+        current_user_id=current_user.id, is_superuser=current_user.is_superuser,
     )
 
 
@@ -293,6 +295,7 @@ async def get_purchase_orders(
     return await purchase_order_service.list_purchase_orders(
         page=page, page_size=page_size,
         status=status, vendor_id=vendor_id, search=search,
+        current_user_id=current_user.id, is_superuser=current_user.is_superuser,
     )
 
 

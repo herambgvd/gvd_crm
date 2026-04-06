@@ -135,28 +135,64 @@ const Leads = () => {
 
   return (
     <Layout>
-      <div className="space-y-6" data-testid="leads-page">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">
-              Leads
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Manage your sales leads across all channels
-            </p>
+      <div className="space-y-4" data-testid="leads-page">
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight">Leads</h1>
+              <p className="text-sm text-muted-foreground">
+                Manage your sales leads across all channels
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setImportOpen(true)}
+              >
+                <Upload className="mr-1.5 h-3.5 w-3.5" />
+                Import
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => navigate("/leads/new")}
+                data-testid="create-lead-btn"
+              >
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                New Lead
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-              <Upload className="mr-1.5 h-3.5 w-3.5" />
-              Import
-            </Button>
-            <Button
-              onClick={() => navigate("/leads/new")}
-              data-testid="create-lead-btn"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New Lead
-            </Button>
+
+          <div className="flex flex-col md:flex-row items-center gap-2">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <Input
+                placeholder="Search by project, source, notes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-8 text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Select
+                value={pageSize.toString()}
+                onValueChange={(value) => setPageSize(Number(value))}
+              >
+                <SelectTrigger className="h-8 text-xs w-full md:w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10 / page</SelectItem>
+                  <SelectItem value="20">20 / page</SelectItem>
+                  <SelectItem value="50">50 / page</SelectItem>
+                  <SelectItem value="100">100 / page</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {leads.length} of {totalItems} leads
+            </span>
           </div>
         </div>
 
@@ -168,53 +204,6 @@ const Leads = () => {
           onStateFilter={setStateFilter}
           activeStateFilter={stateFilter}
         />
-
-        {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-3">
-                <Label htmlFor="search">Search</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="search"
-                    placeholder="Search by project, source, notes..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Results Summary and Page Size */}
-        <div className="flex justify-between items-center">
-          <p className="text-sm text-gray-600">
-            Showing {leads.length} of {totalItems} leads
-          </p>
-          <div className="flex items-center gap-2">
-            <Label htmlFor="page-size" className="text-sm">
-              Per page:
-            </Label>
-            <Select
-              value={pageSize.toString()}
-              onValueChange={(value) => setPageSize(Number(value))}
-            >
-              <SelectTrigger id="page-size" className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
 
         {/* Leads Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -296,7 +285,9 @@ const Leads = () => {
                       {lead.contact_phone && (
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Phone className="h-3 w-3" />
-                          <span className="font-mono text-xs">{lead.contact_phone}</span>
+                          <span className="font-mono text-xs">
+                            {lead.contact_phone}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -394,7 +385,10 @@ const Leads = () => {
                 This action cannot be undone. This will permanently delete the
                 lead
                 <strong className="block mt-2 text-foreground">
-                  {leadToDelete?.project_name || leadToDelete?.customer_name || leadToDelete?.company || "this lead"}
+                  {leadToDelete?.project_name ||
+                    leadToDelete?.customer_name ||
+                    leadToDelete?.company ||
+                    "this lead"}
                 </strong>
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -416,7 +410,9 @@ const Leads = () => {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         entityType="lead"
-        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["leads"] })}
+        onImportComplete={() =>
+          queryClient.invalidateQueries({ queryKey: ["leads"] })
+        }
       />
     </Layout>
   );

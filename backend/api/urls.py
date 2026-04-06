@@ -45,41 +45,82 @@ async def health_check():
 # Dashboard endpoints
 @api_router.get("/dashboard/stats")
 async def get_dashboard_stats(current_user = Depends(get_current_user)):
-    """Get dashboard statistics"""
-    from core.database import get_database
+    """Get dashboard statistics for Sales, Support, and Inventory tabs."""
     db = get_database()
-    
-    # Get comprehensive statistics
-    users_count = await db.users.count_documents({})
-    leads_count = await db.leads.count_documents({})
-    products_count = await db.products.count_documents({})
-    entities_count = await db.entities.count_documents({})
-    sales_orders_count = await db.sales_orders.count_documents({})
-    tickets_count = await db.tickets.count_documents({}) if "tickets" in await db.list_collection_names() else 0
-    
-    # Calculate revenue (aggregation pipeline instead of loading all records)
+    nd = {"is_deleted": {"$ne": True}}
+
+    # ── Sales stats ──
+    leads_count = await db.leads.count_documents(nd)
+    leads_by_state = await db.leads.aggregate([
+        {"$match": nd}, {"$group": {"_id": "$current_state_name", "count": {"$sum": 1}}}
+    ]).to_list(50)
+
     revenue_result = await db.sales_orders.aggregate([
-        {"$match": {"is_deleted": {"$ne": True}}},
+        {"$match": nd},
         {"$group": {"_id": None, "total": {"$sum": {"$toDouble": {"$ifNull": ["$total_amount", 0]}}}}},
     ]).to_list(1)
     total_revenue = revenue_result[0]["total"] if revenue_result else 0
 
-    # Get activity counts (SOP-agnostic — no hardcoded status values)
-    active_leads = await db.leads.count_documents({"is_deleted": {"$ne": True}})
-    pending_orders = await db.sales_orders.count_documents({"is_deleted": {"$ne": True}})
-    
-    # Calculate percentage changes (mock data for now)
+    pipeline_result = await db.leads.aggregate([
+        {"$match": {**nd, "expected_value": {"$exists": True, "$ne": None}}},
+        {"$group": {"_id": None, "total": {"$sum": {"$toDouble": {"$ifNull": ["$expected_value", 0]}}}}},
+    ]).to_list(1)
+    pipeline_value = pipeline_result[0]["total"] if pipeline_result else 0
+
+    sales_orders_count = await db.sales_orders.count_documents(nd)
+    boqs_count = await db.boqs.count_documents(nd)
+    customers_count = await db.customers.count_documents(nd)
+    entities_count = await db.entities.count_documents(nd)
+
+    # ── Support stats ──
+    collections = await db.list_collection_names()
+    tickets_count = await db.tickets.count_documents(nd) if "tickets" in collections else 0
+    tickets_by_state = []
+    if "tickets" in collections:
+        tickets_by_state = await db.tickets.aggregate([
+            {"$match": nd}, {"$group": {"_id": "$current_state_name", "count": {"$sum": 1}}}
+        ]).to_list(50)
+
+    # ── Inventory stats ──
+    products_count = await db.products.count_documents(nd)
+    factory_orders_count = await db.factory_orders.count_documents(nd) if "factory_orders" in collections else 0
+    rma_count = await db.rma_records.count_documents(nd) if "rma_records" in collections else 0
+
+    low_stock_count = await db.products.count_documents({
+        **nd, "is_active": True,
+        "$expr": {"$lte": [{"$ifNull": ["$total_quantity", 0]}, {"$ifNull": ["$min_stock_level", 0]}]}
+    })
+
+    stock_value_result = await db.products.aggregate([
+        {"$match": {**nd, "is_active": True}},
+        {"$group": {"_id": None, "total": {"$sum": {
+            "$multiply": [{"$toDouble": {"$ifNull": ["$unit_price", 0]}}, {"$ifNull": ["$total_quantity", 0]}]
+        }}}},
+    ]).to_list(1)
+    stock_value = stock_value_result[0]["total"] if stock_value_result else 0
+
     return {
-        "total_revenue": total_revenue,
-        "active_leads": active_leads,
-        "pending_orders": pending_orders,
-        "total_sales_orders": sales_orders_count,
-        "total_users": users_count,
-        "total_products": products_count,
-        "total_entities": entities_count,
-        "open_tickets": tickets_count,
-        "total_tickets": tickets_count,
-        "total_records": users_count + leads_count + products_count + entities_count
+        "sales": {
+            "total_leads": leads_count,
+            "leads_by_state": {r["_id"]: r["count"] for r in leads_by_state if r["_id"]},
+            "total_revenue": total_revenue,
+            "pipeline_value": pipeline_value,
+            "sales_orders": sales_orders_count,
+            "boqs": boqs_count,
+            "customers": customers_count,
+            "entities": entities_count,
+        },
+        "support": {
+            "total_tickets": tickets_count,
+            "tickets_by_state": {r["_id"]: r["count"] for r in tickets_by_state if r["_id"]},
+        },
+        "inventory": {
+            "total_products": products_count,
+            "factory_orders": factory_orders_count,
+            "rma_records": rma_count,
+            "low_stock": low_stock_count,
+            "stock_value": stock_value,
+        },
     }
 
 # Include authentication routes

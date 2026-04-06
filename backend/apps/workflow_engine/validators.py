@@ -131,3 +131,28 @@ def validate_transition_form_data(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Field '{label}' must be one of: {', '.join(options)}",
                 )
+
+        if field_type == "multiselect" and options:
+            values = value if isinstance(value, list) else [value]
+            invalid = [v for v in values if str(v) not in options]
+            if invalid:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Field '{label}' contains invalid options: {', '.join(invalid)}. Must be from: {', '.join(options)}",
+                )
+
+        if field_type == "boolean":
+            if value not in (True, False, "true", "false"):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Field '{label}' must be a boolean (true/false).",
+                )
+
+        if field_type == "email":
+            import re
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, str(value)):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Field '{label}' must be a valid email address.",
+                )

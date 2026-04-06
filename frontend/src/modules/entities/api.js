@@ -57,6 +57,13 @@ export const deleteEntity = async (id) => {
   return response.data;
 };
 
+export const bulkDeleteEntities = async (ids) => {
+  const response = await axios.post(`${API}/entities/bulk-delete`, { ids }, {
+    headers: getAuthHeader(),
+  });
+  return response.data;
+};
+
 export const fetchEntity = async (id) => {
   const response = await axios.get(`${API}/entities/${id}`, {
     headers: getAuthHeader(),

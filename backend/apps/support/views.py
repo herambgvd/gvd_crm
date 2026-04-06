@@ -57,6 +57,8 @@ async def list_tickets(
         search=search,
         sop_id=sop_id,
         current_state_id=current_state_id,
+        current_user_id=current_user.id,
+        is_superuser=current_user.is_superuser,
     )
 
 

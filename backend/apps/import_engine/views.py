@@ -91,6 +91,14 @@ def _get_system_fields(entity_type: str):
     return result
 
 
+def _rows_to_dicts(headers, rows):
+    """Convert list-of-lists rows to list-of-dicts using headers as keys."""
+    return [
+        {h: row[i] if i < len(row) else "" for i, h in enumerate(headers)}
+        for row in rows
+    ]
+
+
 # ─────────────────── Endpoints ───────────────────
 
 @router.get("/entities")
@@ -117,7 +125,7 @@ async def preview_file_endpoint(
     headers, rows = _parse_upload(file.filename, content)
     return {
         "headers": headers,
-        "preview_rows": rows[:5],
+        "preview_rows": _rows_to_dicts(headers, rows[:5]),
         "total_rows": len(rows),
         "system_fields": _get_system_fields(entity_type) if entity_type else [],
     }
@@ -163,7 +171,7 @@ async def preview_google_sheet(
     headers, rows = parse_csv_content(content)
     return {
         "headers": headers,
-        "preview_rows": rows[:5],
+        "preview_rows": _rows_to_dicts(headers, rows[:5]),
         "total_rows": len(rows),
         "system_fields": _get_system_fields(entity_type) if entity_type else [],
     }

@@ -5,8 +5,8 @@ Full CRUD with proper validation, pagination, and bulk upload.
 Replaces the old entity_views.py that lived inside leads/ with raw dicts.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
-from typing import Optional
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, UploadFile, File
+from typing import List, Optional
 import csv
 import io
 
@@ -123,6 +123,18 @@ async def delete_entity(
     if not deleted:
         raise HTTPException(status_code=404, detail="Entity not found")
     return {"message": "Entity deleted successfully"}
+
+
+@router.post("/bulk-delete")
+async def bulk_delete_entities(
+    ids: List[str] = Body(..., embed=True),
+    current_user: User = Depends(require_permission("entities:delete")),
+):
+    """Bulk soft-delete entities by list of IDs. Max 100 at a time."""
+    if not ids or len(ids) > 100:
+        raise HTTPException(status_code=400, detail="Provide 1-100 entity IDs")
+    count = await entity_service.bulk_soft_delete(ids, user_id=current_user.id)
+    return {"deleted": count, "message": f"{count} entities deleted"}
 
 
 # ──────────────────────────────────────────────

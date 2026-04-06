@@ -11,6 +11,8 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { Textarea } from "../../../components/ui/textarea";
+import { Checkbox } from "../../../components/ui/checkbox";
+import { Switch } from "../../../components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -128,6 +130,59 @@ const TransitionDialog = ({
               ))}
             </SelectContent>
           </Select>
+        );
+      case "multiselect": {
+        const selected = Array.isArray(formData[field.label])
+          ? formData[field.label]
+          : [];
+        return (
+          <div className="space-y-2 border rounded-md p-2 max-h-40 overflow-y-auto">
+            {(field.options || []).map((opt) => (
+              <label
+                key={opt}
+                className="flex items-center gap-2 text-sm cursor-pointer"
+              >
+                <Checkbox
+                  checked={selected.includes(opt)}
+                  onCheckedChange={(checked) => {
+                    const next = checked
+                      ? [...selected, opt]
+                      : selected.filter((v) => v !== opt);
+                    setField(field.label, next);
+                  }}
+                />
+                {opt}
+              </label>
+            ))}
+          </div>
+        );
+      }
+      case "boolean":
+        return (
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={
+                formData[field.label] === true ||
+                formData[field.label] === "true"
+              }
+              onCheckedChange={(checked) => setField(field.label, checked)}
+            />
+            <span className="text-sm text-muted-foreground">
+              {formData[field.label] === true ||
+              formData[field.label] === "true"
+                ? "Yes"
+                : "No"}
+            </span>
+          </div>
+        );
+      case "email":
+        return (
+          <Input
+            type="email"
+            value={value}
+            onChange={(e) => setField(field.label, e.target.value)}
+            placeholder={field.placeholder || "example@email.com"}
+          />
         );
       default:
         return (

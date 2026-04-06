@@ -171,3 +171,136 @@ async def delete_team(
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Team not found")
     return {"message": "Team deleted successfully"}
+
+
+# ── Data Access Grants ──────────────────────────────────────────────
+
+@router.get("/{team_id}/grants")
+async def list_grants(
+    team_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """List all data access grants for a team. Only the team leader can view."""
+    db = get_database()
+    team = await db.teams.find_one({"id": team_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    # Only leader or superuser can manage grants
+    if not current_user.is_superuser and team.get("leader_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="Only team leader can manage access grants")
+
+    grants = await db.data_access_grants.find(
+        {"team_id": team_id, "is_deleted": {"$ne": True}},
+        {"_id": 0}
+    ).to_list(100)
+
+    # Enrich with user names
+    user_ids = set()
+    for g in grants:
+        user_ids.add(g.get("grantee_id", ""))
+        user_ids.add(g.get("target_user_id", ""))
+
+    users = await db.users.find(
+        {"id": {"$in": list(user_ids)}},
+        {"_id": 0, "id": 1, "first_name": 1, "last_name": 1}
+    ).to_list(len(user_ids))
+    user_map = {u["id"]: f"{u['first_name']} {u['last_name']}" for u in users}
+
+    for g in grants:
+        g["grantee_name"] = user_map.get(g.get("grantee_id"), "")
+        g["target_user_name"] = user_map.get(g.get("target_user_id"), "")
+
+    return grants
+
+
+@router.post("/{team_id}/grants")
+async def create_grant(
+    team_id: str,
+    data: dict,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Grant a team member access to another member's data.
+    Body: { grantee_id, target_user_id }
+    """
+    db = get_database()
+    team = await db.teams.find_one({"id": team_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    if not current_user.is_superuser and team.get("leader_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="Only team leader can grant access")
+
+    grantee_id = data.get("grantee_id")
+    target_user_id = data.get("target_user_id")
+
+    if not grantee_id or not target_user_id:
+        raise HTTPException(status_code=400, detail="grantee_id and target_user_id required")
+
+    if grantee_id == target_user_id:
+        raise HTTPException(status_code=400, detail="Cannot grant access to own data")
+
+    # Verify both users are in the team
+    team_members = set(team.get("member_ids", []))
+    team_members.add(team.get("leader_id", ""))
+    if grantee_id not in team_members or target_user_id not in team_members:
+        raise HTTPException(status_code=400, detail="Both users must be in the team")
+
+    # Check if grant already exists
+    existing = await db.data_access_grants.find_one({
+        "team_id": team_id,
+        "grantee_id": grantee_id,
+        "target_user_id": target_user_id,
+        "is_deleted": {"$ne": True},
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Access already granted")
+
+    now = datetime.now(timezone.utc).isoformat()
+    grant = {
+        "id": str(uuid.uuid4()),
+        "team_id": team_id,
+        "grantee_id": grantee_id,
+        "target_user_id": target_user_id,
+        "granted_by": current_user.id,
+        "created_at": now,
+        "is_deleted": False,
+    }
+    await db.data_access_grants.insert_one(grant)
+    grant.pop("_id", None)
+
+    # Clear access cache
+    from core.data_access import clear_access_cache
+    await clear_access_cache()
+
+    return grant
+
+
+@router.delete("/{team_id}/grants/{grant_id}")
+async def revoke_grant(
+    team_id: str,
+    grant_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Revoke a data access grant."""
+    db = get_database()
+    team = await db.teams.find_one({"id": team_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    if not current_user.is_superuser and team.get("leader_id") != current_user.id:
+        raise HTTPException(status_code=403, detail="Only team leader can revoke access")
+
+    result = await db.data_access_grants.update_one(
+        {"id": grant_id, "team_id": team_id, "is_deleted": {"$ne": True}},
+        {"$set": {"is_deleted": True, "deleted_at": datetime.now(timezone.utc).isoformat()}}
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Grant not found")
+
+    from core.data_access import clear_access_cache
+    await clear_access_cache()
+
+    return {"message": "Access revoked"}

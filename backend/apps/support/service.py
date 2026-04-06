@@ -50,9 +50,17 @@ class TicketService(BaseCRUDService):
         current_state_id: Optional[str] = None,
         sort_by: str = "created_at",
         sort_order: int = -1,
+        current_user_id: Optional[str] = None,
+        is_superuser: bool = True,
     ) -> Dict[str, Any]:
         """List tickets with filters and server-side pagination."""
         query: Dict[str, Any] = {}
+
+        # Access restriction: team-based data access control
+        from core.data_access import build_access_query, merge_access_filter
+        if current_user_id:
+            access_filter = await build_access_query(current_user_id, is_superuser)
+            query = merge_access_filter(query, access_filter)
 
         if status:
             query["status"] = status

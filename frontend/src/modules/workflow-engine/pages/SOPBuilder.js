@@ -52,8 +52,16 @@ import {
 import { toast } from "sonner";
 
 const DEFAULT_COLORS = [
-  "#3B82F6", "#F59E0B", "#10B981", "#EF4444", "#8B5CF6",
-  "#EC4899", "#06B6D4", "#84CC16", "#F97316", "#6366F1",
+  "#3B82F6",
+  "#F59E0B",
+  "#10B981",
+  "#EF4444",
+  "#8B5CF6",
+  "#EC4899",
+  "#06B6D4",
+  "#84CC16",
+  "#F97316",
+  "#6366F1",
 ];
 
 const FIELD_TYPES = [
@@ -61,6 +69,9 @@ const FIELD_TYPES = [
   { value: "number", label: "Number" },
   { value: "date", label: "Date" },
   { value: "select", label: "Dropdown" },
+  { value: "multiselect", label: "Multi-select Dropdown" },
+  { value: "boolean", label: "Boolean" },
+  { value: "email", label: "Email" },
   { value: "textarea", label: "Text Area" },
   { value: "file", label: "File" },
 ];
@@ -98,21 +109,37 @@ function SortableStateItem({ state, onEdit, onDelete }) {
       <div className="flex-1 min-w-0 flex items-center gap-1.5">
         <span className="font-medium text-xs">{state.name}</span>
         {state.is_start && (
-          <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 leading-none text-muted-foreground">
+          <Badge
+            variant="outline"
+            className="text-[9px] px-1 py-0 h-3.5 leading-none text-muted-foreground"
+          >
             start
           </Badge>
         )}
         {state.is_end && (
-          <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 leading-none text-muted-foreground">
+          <Badge
+            variant="outline"
+            className="text-[9px] px-1 py-0 h-3.5 leading-none text-muted-foreground"
+          >
             end
           </Badge>
         )}
       </div>
 
-      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(state)}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6"
+        onClick={() => onEdit(state)}
+      >
         <Edit className="h-3 w-3" />
       </Button>
-      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onDelete(state.id)}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6"
+        onClick={() => onDelete(state.id)}
+      >
         <Trash2 className="h-3 w-3 text-destructive" />
       </Button>
     </div>
@@ -149,9 +176,7 @@ const SOPBuilder = () => {
       setName(sopData.name);
       setDescription(sopData.description || "");
       setModule(sopData.module);
-      setStates(
-        (sopData.states || []).sort((a, b) => a.position - b.position)
-      );
+      setStates((sopData.states || []).sort((a, b) => a.position - b.position));
       setTransitions(sopData.transitions || []);
     }
   }, [sopData]);
@@ -161,23 +186,20 @@ const SOPBuilder = () => {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
-  const handleDragEnd = useCallback(
-    (event) => {
-      const { active, over } = event;
-      if (active.id !== over?.id) {
-        setStates((prev) => {
-          const oldIndex = prev.findIndex((s) => s.id === active.id);
-          const newIndex = prev.findIndex((s) => s.id === over.id);
-          const newArr = arrayMove(prev, oldIndex, newIndex);
-          return newArr.map((s, i) => ({ ...s, position: i }));
-        });
-      }
-    },
-    []
-  );
+  const handleDragEnd = useCallback((event) => {
+    const { active, over } = event;
+    if (active.id !== over?.id) {
+      setStates((prev) => {
+        const oldIndex = prev.findIndex((s) => s.id === active.id);
+        const newIndex = prev.findIndex((s) => s.id === over.id);
+        const newArr = arrayMove(prev, oldIndex, newIndex);
+        return newArr.map((s, i) => ({ ...s, position: i }));
+      });
+    }
+  }, []);
 
   // Save mutation
   const saveMutation = useMutation({
@@ -199,8 +221,10 @@ const SOPBuilder = () => {
 
     const startStates = states.filter((s) => s.is_start);
     const endStates = states.filter((s) => s.is_end);
-    if (startStates.length !== 1) return toast.error("Exactly one start state required");
-    if (endStates.length === 0) return toast.error("At least one end state required");
+    if (startStates.length !== 1)
+      return toast.error("Exactly one start state required");
+    if (endStates.length === 0)
+      return toast.error("At least one end state required");
 
     saveMutation.mutate({
       name: name.trim(),
@@ -230,7 +254,7 @@ const SOPBuilder = () => {
     if (stateData.id) {
       // Edit existing
       setStates((prev) =>
-        prev.map((s) => (s.id === stateData.id ? { ...s, ...stateData } : s))
+        prev.map((s) => (s.id === stateData.id ? { ...s, ...stateData } : s)),
       );
     } else {
       // New state
@@ -247,10 +271,9 @@ const SOPBuilder = () => {
       setStates((prev) =>
         prev.map((s) => ({
           ...s,
-          is_start: s.id === (stateData.id || prev[prev.length - 1]?.id)
-            ? true
-            : false,
-        }))
+          is_start:
+            s.id === (stateData.id || prev[prev.length - 1]?.id) ? true : false,
+        })),
       );
     }
 
@@ -261,8 +284,8 @@ const SOPBuilder = () => {
     setStates((prev) => prev.filter((s) => s.id !== stateId));
     setTransitions((prev) =>
       prev.filter(
-        (t) => t.from_state_id !== stateId && t.to_state_id !== stateId
-      )
+        (t) => t.from_state_id !== stateId && t.to_state_id !== stateId,
+      ),
     );
   };
 
@@ -287,7 +310,7 @@ const SOPBuilder = () => {
 
     if (transData.id) {
       setTransitions((prev) =>
-        prev.map((t) => (t.id === transData.id ? { ...t, ...transData } : t))
+        prev.map((t) => (t.id === transData.id ? { ...t, ...transData } : t)),
       );
     } else {
       setTransitions((prev) => [
@@ -379,7 +402,12 @@ const SOPBuilder = () => {
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold">Pipeline States</h2>
-              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={addState}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={addState}
+              >
                 <Plus className="mr-1 h-3 w-3" />
                 Add State
               </Button>
@@ -471,12 +499,16 @@ const SOPBuilder = () => {
                       <span className="font-medium">
                         {stateMap[t.to_state_id] || "?"}
                       </span>
-                      <Badge variant="secondary" className="text-[10px] ml-1.5 h-4 px-1.5">
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] ml-1.5 h-4 px-1.5"
+                      >
                         {t.name}
                       </Badge>
                       {t.form_fields?.length > 0 && (
                         <span className="text-[10px] text-muted-foreground">
-                          · {t.form_fields.length} field{t.form_fields.length > 1 ? "s" : ""}
+                          · {t.form_fields.length} field
+                          {t.form_fields.length > 1 ? "s" : ""}
                         </span>
                       )}
                     </div>
@@ -514,13 +546,17 @@ const SOPBuilder = () => {
           >
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending}>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={saveMutation.isPending}
+          >
             <Save className="mr-1.5 h-3.5 w-3.5" />
             {saveMutation.isPending
               ? "Saving..."
               : isEdit
-              ? "Update SOP"
-              : "Create SOP"}
+                ? "Update SOP"
+                : "Create SOP"}
           </Button>
         </div>
       </div>
@@ -584,7 +620,9 @@ function StateEditDialog({ open, state, onClose, onSave }) {
                 <button
                   key={c}
                   className={`w-7 h-7 rounded-full border-2 ${
-                    form.color === c ? "border-foreground" : "border-transparent"
+                    form.color === c
+                      ? "border-foreground"
+                      : "border-transparent"
                   }`}
                   style={{ backgroundColor: c }}
                   onClick={() => setForm((prev) => ({ ...prev, color: c }))}
@@ -649,8 +687,7 @@ function TransitionEditDialog({ open, transition, states, onClose, onSave }) {
 
   if (!open) return null;
 
-  const setVal = (field, val) =>
-    setForm((prev) => ({ ...prev, [field]: val }));
+  const setVal = (field, val) => setForm((prev) => ({ ...prev, [field]: val }));
 
   // ── Form field management ──
 
@@ -805,7 +842,7 @@ function TransitionEditDialog({ open, transition, states, onClose, onSave }) {
                   </Button>
                 </div>
 
-                {field.type === "select" && (
+                {(field.type === "select" || field.type === "multiselect") && (
                   <div>
                     <Input
                       value={(field.options || []).join(", ")}
@@ -816,7 +853,7 @@ function TransitionEditDialog({ open, transition, states, onClose, onSave }) {
                           e.target.value
                             .split(",")
                             .map((s) => s.trim())
-                            .filter(Boolean)
+                            .filter(Boolean),
                         )
                       }
                       placeholder="Options (comma separated): Option1, Option2"

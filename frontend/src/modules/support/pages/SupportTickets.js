@@ -2,10 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "../../../components";
-import {
-  fetchTickets,
-  deleteTicket,
-} from "../api";
+import { fetchTickets, deleteTicket } from "../api";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Badge } from "../../../components/ui/badge";
@@ -157,26 +154,67 @@ const SupportTickets = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">
-              Support Tickets
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Manage technical support tickets and track resolution progress
-            </p>
+      <div className="space-y-4">
+        {/* Header + Filters */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-semibold tracking-tight">
+                Support Tickets
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Manage technical support tickets and track resolution progress
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setImportOpen(true)}
+              >
+                <Upload className="mr-1.5 h-3.5 w-3.5" />
+                Import
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => navigate("/support/tickets/new")}
+              >
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                New Ticket
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-              <Upload className="mr-1.5 h-3.5 w-3.5" />
-              Import
-            </Button>
-            <Button onClick={() => navigate("/support/tickets/new")}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Ticket
-            </Button>
+
+          <div className="flex flex-col md:flex-row items-center gap-2">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search tickets..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-8 h-8 text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Select
+                value={priorityFilter}
+                onValueChange={handlePriorityChange}
+              >
+                <SelectTrigger className="h-8 text-xs w-full md:w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="Low">Low</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                  <SelectItem value="Critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {totalTickets} tickets
+            </span>
           </div>
         </div>
 
@@ -189,136 +227,97 @@ const SupportTickets = () => {
           activeStateFilter={stateFilter}
         />
 
-        {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search tickets..."
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-              <div className="w-full md:w-48">
-                <Select
-                  value={priorityFilter}
-                  onValueChange={handlePriorityChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Priorities</SelectItem>
-                    <SelectItem value="Low">Low</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="High">High</SelectItem>
-                    <SelectItem value="Critical">Critical</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Tickets Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {tickets.map((ticket) => (
-              <Card
-                key={ticket.id}
-                className="hover:shadow-md transition-shadow"
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
+            <Card key={ticket.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="font-semibold text-lg">
+                      {ticket.ticket_number}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {ticket.customer_name}
+                    </p>
+                  </div>
+                  <Badge className={getPriorityBadge(ticket.priority)}>
+                    {ticket.priority}
+                  </Badge>
+                </div>
+
+                <div className="flex items-center gap-2 mb-4">
+                  <StateBadge
+                    stateName={ticket.current_state_name}
+                    stateColor={null}
+                  />
+                </div>
+
+                <div className="space-y-2 text-sm mb-4">
+                  {ticket.product_name && (
                     <div>
-                      <h3 className="font-semibold text-lg">
-                        {ticket.ticket_number}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {ticket.customer_name}
-                      </p>
-                    </div>
-                    <Badge className={getPriorityBadge(ticket.priority)}>
-                      {ticket.priority}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center gap-2 mb-4">
-                    <StateBadge
-                      stateName={ticket.current_state_name}
-                      stateColor={null}
-                    />
-                  </div>
-
-                  <div className="space-y-2 text-sm mb-4">
-                    {ticket.product_name && (
-                      <div>
-                        <span className="font-medium">Product:</span>{" "}
-                        {ticket.product_name}
-                      </div>
-                    )}
-                    {ticket.project_name && (
-                      <div>
-                        <span className="font-medium">Project:</span>{" "}
-                        {ticket.project_name}
-                      </div>
-                    )}
-                    {ticket.ticket_type && (
-                      <div>
-                        <span className="font-medium">Type:</span>{" "}
-                        {ticket.ticket_type}
-                      </div>
-                    )}
-                    {ticket.location_site && (
-                      <div>
-                        <span className="font-medium">Location:</span>{" "}
-                        {ticket.location_site}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="text-xs text-muted-foreground mb-4">
-                    Created:{" "}
-                    {ticket.created_at
-                      ? new Date(ticket.created_at).toLocaleDateString()
-                      : "N/A"}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/support/tickets/${ticket.id}`)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" /> View
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(ticket)}
-                      className="ml-auto text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {/* Workflow Transition Actions */}
-                  {ticket.sop_id && (
-                    <div className="pt-3 border-t mt-3">
-                      <TransitionActions
-                        recordType="ticket"
-                        recordId={ticket.id}
-                        invalidateKeys={[["support-tickets"]]}
-                      />
+                      <span className="font-medium">Product:</span>{" "}
+                      {ticket.product_name}
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            ))}
+                  {ticket.project_name && (
+                    <div>
+                      <span className="font-medium">Project:</span>{" "}
+                      {ticket.project_name}
+                    </div>
+                  )}
+                  {ticket.ticket_type && (
+                    <div>
+                      <span className="font-medium">Type:</span>{" "}
+                      {ticket.ticket_type}
+                    </div>
+                  )}
+                  {ticket.location_site && (
+                    <div>
+                      <span className="font-medium">Location:</span>{" "}
+                      {ticket.location_site}
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-xs text-muted-foreground mb-4">
+                  Created:{" "}
+                  {ticket.created_at
+                    ? new Date(ticket.created_at).toLocaleDateString()
+                    : "N/A"}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/support/tickets/${ticket.id}`)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" /> View
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(ticket)}
+                    className="ml-auto text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Workflow Transition Actions */}
+                {ticket.sop_id && (
+                  <div className="pt-3 border-t mt-3">
+                    <TransitionActions
+                      recordType="ticket"
+                      recordId={ticket.id}
+                      invalidateKeys={[["support-tickets"]]}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {tickets.length === 0 && (
@@ -389,7 +388,9 @@ const SupportTickets = () => {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         entityType="ticket"
-        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["support-tickets"] })}
+        onImportComplete={() =>
+          queryClient.invalidateQueries({ queryKey: ["support-tickets"] })
+        }
       />
     </Layout>
   );

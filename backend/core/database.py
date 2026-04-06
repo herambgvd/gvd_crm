@@ -153,6 +153,11 @@ class DatabaseManager:
             # Team indexes
             await self.database.teams.create_index("name", unique=True)
             await self.database.teams.create_index("leader_id")
+
+            # Data access grants
+            await self.database.data_access_grants.create_index("team_id")
+            await self.database.data_access_grants.create_index("grantee_id")
+            await self.database.data_access_grants.create_index([("grantee_id", 1), ("target_user_id", 1)])
             
             # Stock movement / inventory indexes (legacy)
             await self.database.stock_movements.create_index("product_id")

@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 class FormFieldSchema(BaseModel):
     id: Optional[str] = None
     label: str = Field(..., min_length=1)
-    type: str = Field(default="text")  # text, number, date, select, textarea, file
+    type: str = Field(default="text")  # text, number, date, select, multiselect, boolean, email, textarea, file
     required: bool = False
     placeholder: str = ""
     options: List[str] = Field(default_factory=list)

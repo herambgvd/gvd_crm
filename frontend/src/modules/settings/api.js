@@ -333,6 +333,32 @@ export const uploadTemplateFooterImage = async (templateId, file) => {
   return response.data;
 };
 
+// ─── Data Access Grants ─────────────────────────────────
+
+export const fetchTeamGrants = async (teamId) => {
+  const response = await axios.get(`${BACKEND_URL}/api/v1/auth/teams/${teamId}/grants`, {
+    headers: getAuthHeader(),
+  });
+  return response.data;
+};
+
+export const createTeamGrant = async (teamId, granteeId, targetUserId) => {
+  const response = await axios.post(
+    `${BACKEND_URL}/api/v1/auth/teams/${teamId}/grants`,
+    { grantee_id: granteeId, target_user_id: targetUserId },
+    { headers: { ...getAuthHeader(), "Content-Type": "application/json" } },
+  );
+  return response.data;
+};
+
+export const revokeTeamGrant = async (teamId, grantId) => {
+  const response = await axios.delete(
+    `${BACKEND_URL}/api/v1/auth/teams/${teamId}/grants/${grantId}`,
+    { headers: getAuthHeader() },
+  );
+  return response.data;
+};
+
 // ─── Config Management ─────────────────────────────────
 
 export const fetchConfig = async () => {

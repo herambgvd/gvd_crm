@@ -17,10 +17,10 @@ class FormField(BaseModel):
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     label: str
-    type: str = "text"  # text, number, date, select, textarea, file
+    type: str = "text"  # text, number, date, select, multiselect, boolean, email, textarea, file
     required: bool = False
     placeholder: str = ""
-    options: List[str] = Field(default_factory=list)  # for select type
+    options: List[str] = Field(default_factory=list)  # for select / multiselect type
     default_value: str = ""
 
 

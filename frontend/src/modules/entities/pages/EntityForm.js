@@ -51,7 +51,7 @@ const EntityForm = () => {
   useEffect(() => {
     if (entity) {
       setFormData({
-        entity_type: entity.entity_type,
+        entity_type: (entity.entity_type || "").toLowerCase(),
         company_name: entity.company_name,
         contact_person: entity.contact_person,
         email: entity.email || "",
@@ -146,6 +146,7 @@ const EntityForm = () => {
                       <SelectItem value="dealer">Dealer</SelectItem>
                       <SelectItem value="si">System Integrator (SI)</SelectItem>
                       <SelectItem value="distributor">Distributor</SelectItem>
+                      <SelectItem value="end_customer">End Customer</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

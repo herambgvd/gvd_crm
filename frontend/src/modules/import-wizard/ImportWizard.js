@@ -159,7 +159,7 @@ export default function ImportWizard({ open, onClose, entityType, onImportComple
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-base">Import Data</DialogTitle>
         </DialogHeader>
@@ -274,12 +274,12 @@ export default function ImportWizard({ open, onClose, entityType, onImportComple
             <p className="text-xs text-muted-foreground">
               Showing first {previewData.preview_rows.length} rows. Verify the data looks correct.
             </p>
-            <div className="border rounded max-h-48 overflow-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-muted sticky top-0">
+            <div className="border rounded max-h-52 overflow-auto">
+              <table className="text-xs border-collapse">
+                <thead className="bg-muted sticky top-0 z-10">
                   <tr>
                     {previewData.headers.map((h) => (
-                      <th key={h} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">
+                      <th key={h} className="px-2 py-1.5 text-left font-medium whitespace-nowrap border-b">
                         {h}
                       </th>
                     ))}
@@ -287,9 +287,9 @@ export default function ImportWizard({ open, onClose, entityType, onImportComple
                 </thead>
                 <tbody>
                   {previewData.preview_rows.map((row, i) => (
-                    <tr key={i} className="border-t">
+                    <tr key={i} className="border-t hover:bg-muted/30">
                       {previewData.headers.map((h) => (
-                        <td key={h} className="px-2 py-1 whitespace-nowrap max-w-[200px] truncate">
+                        <td key={h} className="px-2 py-1 whitespace-nowrap max-w-[150px] truncate text-muted-foreground">
                           {row[h] ?? ""}
                         </td>
                       ))}

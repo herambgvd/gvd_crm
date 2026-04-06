@@ -6,7 +6,6 @@ import { BACKEND_URL } from "../../../lib/axios";
 import {
   fetchProducts,
   deleteProduct,
-  bulkUploadProducts,
   fetchCategoryTree,
   fetchStockSummary,
   transferProductStock,
@@ -24,7 +23,6 @@ import {
   Edit,
   Trash2,
   Upload,
-  Download,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -56,12 +54,6 @@ import {
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../../components/ui/tabs";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -78,11 +70,6 @@ const Products = () => {
   const [productToDelete, setProductToDelete] = useState(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [productToView, setProductToView] = useState(null);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [uploadType, setUploadType] = useState("excel");
-  const [excelFile, setExcelFile] = useState(null);
-  const [googleSheetUrl, setGoogleSheetUrl] = useState("");
-  const [imageFiles, setImageFiles] = useState([]);
 
   // Transfer dialog state
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -187,25 +174,6 @@ const Products = () => {
     },
   });
 
-  const bulkUploadMutation = useMutation({
-    mutationFn: bulkUploadProducts,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(["products"]);
-      toast.success(`Successfully uploaded ${data.success_count} products!`);
-      if (data.errors?.length > 0) {
-        toast.warning(`${data.errors.length} products failed to upload`);
-      }
-      setUploadDialogOpen(false);
-      setExcelFile(null);
-      setGoogleSheetUrl("");
-      setImageFiles([]);
-      setUploadType("excel");
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.detail || "Failed to upload products");
-    },
-  });
-
   // Stock transfer mutation
   const transferMutation = useMutation({
     mutationFn: ({ productId, data }) => transferProductStock(productId, data),
@@ -267,99 +235,6 @@ const Products = () => {
     }
   };
 
-  const handleExcelFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (
-        !file.name.endsWith(".xlsx") &&
-        !file.name.endsWith(".xls") &&
-        !file.name.endsWith(".csv")
-      ) {
-        toast.error("Please upload an Excel or CSV file");
-        return;
-      }
-      setExcelFile(file);
-    }
-  };
-
-  const handleImageFilesChange = (e) => {
-    setImageFiles(Array.from(e.target.files));
-  };
-
-  const handleBulkUpload = () => {
-    if (uploadType === "excel" && !excelFile) {
-      toast.error("Please select a file");
-      return;
-    }
-    if (uploadType === "sheets" && !googleSheetUrl.trim()) {
-      toast.error("Please enter a Google Sheets URL");
-      return;
-    }
-
-    const formData = new FormData();
-    if (uploadType === "excel") {
-      formData.append("file", excelFile);
-    } else {
-      formData.append("google_sheet_url", googleSheetUrl.trim());
-    }
-    imageFiles.forEach((file) => formData.append("image_files", file));
-    bulkUploadMutation.mutate(formData);
-  };
-
-  const downloadTemplate = () => {
-    const headers = [
-      "sku",
-      "name",
-      "category",
-      "description",
-      "unit_of_measure",
-      "unit_price",
-      "cost_price",
-      "stock_quantity",
-      "min_stock_level",
-      "specifications",
-    ];
-    const sampleData = [
-      [
-        "CAM001",
-        "IP Dome Camera 2MP",
-        "Camera",
-        "High quality dome camera",
-        "Nos",
-        "5000",
-        "3500",
-        "100",
-        "10",
-        '{"Resolution": "2MP", "Night Vision": "Yes"}',
-      ],
-      [
-        "NVR001",
-        "8 Channel NVR",
-        "NVR",
-        "8 channel network video recorder",
-        "Nos",
-        "15000",
-        "12000",
-        "50",
-        "5",
-        '{"Channels": "8CH", "Compression": "H.265"}',
-      ],
-    ];
-
-    const csvContent = [
-      headers.join(","),
-      ...sampleData.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "product_upload_template.csv";
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
     if (imagePath.startsWith("http")) return imagePath;
@@ -395,11 +270,7 @@ const Products = () => {
               <Upload className="mr-1.5 h-3.5 w-3.5" />
               Import
             </Button>
-            <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              Bulk Upload
-            </Button>
-            <Button onClick={() => navigate("/products/new")}>
+<Button onClick={() => navigate("/products/new")}>
               <Plus className="mr-2 h-4 w-4" />
               New Product
             </Button>
@@ -1067,136 +938,6 @@ const Products = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-        {/* Bulk Upload Dialog */}
-        <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Bulk Upload Products</DialogTitle>
-              <DialogDescription>
-                Upload products in bulk using CSV file or Google Sheets
-              </DialogDescription>
-            </DialogHeader>
-            <Tabs
-              value={uploadType}
-              onValueChange={setUploadType}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="excel">CSV/Excel Upload</TabsTrigger>
-                <TabsTrigger value="sheets">Google Sheets</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="excel" className="space-y-6 py-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Download Template</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={downloadTemplate}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download CSV Template
-                    </Button>
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    Download the template, fill in your product data, and upload
-                    it below.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="excel_file">
-                    CSV/Excel File (.csv, .xlsx, .xls) *
-                  </Label>
-                  <Input
-                    id="excel_file"
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={handleExcelFileChange}
-                  />
-                  {excelFile && (
-                    <p className="text-sm text-green-600">
-                      Selected: {excelFile.name}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="image_files">Product Images (Optional)</Label>
-                  <Input
-                    id="image_files"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageFilesChange}
-                  />
-                  {imageFiles.length > 0 && (
-                    <p className="text-sm text-green-600">
-                      {imageFiles.length} image(s) selected
-                    </p>
-                  )}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="sheets" className="space-y-6 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="google_sheet_url">Google Sheets URL *</Label>
-                  <Input
-                    id="google_sheet_url"
-                    type="url"
-                    value={googleSheetUrl}
-                    onChange={(e) => setGoogleSheetUrl(e.target.value)}
-                    placeholder="https://docs.google.com/spreadsheets/d/..."
-                  />
-                  <p className="text-sm text-gray-500">
-                    Paste your Google Sheets shareable link.
-                  </p>
-                </div>
-              </TabsContent>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-sm mb-2">Required Columns:</h4>
-                <ul className="text-sm space-y-1 text-gray-600">
-                  <li>
-                    • <strong>sku</strong>, <strong>name</strong>,{" "}
-                    <strong>category</strong>, <strong>unit_price</strong>
-                  </li>
-                  <li>
-                    • Optional: description, cost_price, unit_of_measure,
-                    stock_quantity, min_stock_level, specifications
-                  </li>
-                </ul>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setUploadDialogOpen(false);
-                    setExcelFile(null);
-                    setGoogleSheetUrl("");
-                    setImageFiles([]);
-                    setUploadType("excel");
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleBulkUpload}
-                  disabled={
-                    (uploadType === "excel" && !excelFile) ||
-                    (uploadType === "sheets" && !googleSheetUrl.trim()) ||
-                    bulkUploadMutation.isPending
-                  }
-                >
-                  {bulkUploadMutation.isPending
-                    ? "Uploading..."
-                    : "Upload Products"}
-                </Button>
-              </div>
-            </Tabs>
-          </DialogContent>
-        </Dialog>
 
         {/* Stock Transfer Dialog */}
         <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>

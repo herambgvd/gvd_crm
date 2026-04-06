@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "../../../components";
-import { fetchEntities, deleteEntity } from "../api";
+import { fetchEntities, deleteEntity, bulkDeleteEntities } from "../api";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Badge } from "../../../components/ui/badge";
@@ -53,6 +53,8 @@ const Entities = () => {
   const queryClient = useQueryClient();
 
   const [importOpen, setImportOpen] = React.useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   // Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -111,6 +113,37 @@ const Entities = () => {
     },
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (ids) => bulkDeleteEntities(Array.from(ids)),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(["entities"]);
+      toast.success(`${data.deleted} entities deleted`);
+      setSelectedIds(new Set());
+      setBulkDeleteOpen(false);
+    },
+    onError: (error) => {
+      toast.error(error.response?.data?.detail || "Failed to delete entities");
+      setBulkDeleteOpen(false);
+    },
+  });
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === entities.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(entities.map((e) => e.id)));
+    }
+  };
+
   const handleView = (entity) => {
     setEntityToView(entity);
     setViewDialogOpen(true);
@@ -128,21 +161,24 @@ const Entities = () => {
   };
 
   const getEntityTypeBadge = (type) => {
+    const normalized = (type || "").toLowerCase();
     const variants = {
       consultant: "bg-blue-50 text-blue-700 ring-blue-600/20",
       dealer: "bg-green-50 text-green-700 ring-green-600/20",
       si: "bg-purple-50 text-purple-700 ring-purple-600/20",
       distributor: "bg-orange-50 text-orange-700 ring-orange-600/20",
+      end_customer: "bg-teal-50 text-teal-700 ring-teal-600/20",
     };
     const labels = {
       consultant: "Consultant",
       dealer: "Dealer",
       si: "System Integrator",
       distributor: "Distributor",
+      end_customer: "End Customer",
     };
     return (
-      <Badge className={`${variants[type]} ring-1 ring-inset`}>
-        {labels[type]}
+      <Badge className={`${variants[normalized] || "bg-gray-50 text-gray-700 ring-gray-600/20"} ring-1 ring-inset`}>
+        {labels[normalized] || type}
       </Badge>
     );
   };
@@ -159,184 +195,166 @@ const Entities = () => {
 
   return (
     <Layout>
-      <div className="space-y-6" data-testid="entities-page">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">
-              Entity Master
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Manage consultants, dealers, system integrators, and distributors
-            </p>
+      <div className="space-y-4" data-testid="entities-page">
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight">
+                Entity Master
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Manage consultants, dealers, system integrators, and
+                distributors
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setImportOpen(true)}
+              >
+                <Upload className="mr-1.5 h-3.5 w-3.5" />
+                Import
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => navigate("/entities/new")}
+                data-testid="create-entity-btn"
+              >
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                New Entity
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-              <Upload className="mr-1.5 h-3.5 w-3.5" />
-              Import
-            </Button>
-            <Button
-              onClick={() => navigate("/entities/new")}
-              data-testid="create-entity-btn"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New Entity
-            </Button>
+
+          <div className="flex flex-col md:flex-row items-center gap-2">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+              <Input
+                placeholder="Search by company name, contact person, or email..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-8 text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Select
+                value={entityTypeFilter}
+                onValueChange={setEntityTypeFilter}
+              >
+                <SelectTrigger className="h-8 text-xs w-full md:w-36">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  {entityTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={pageSize.toString()}
+                onValueChange={(value) => setPageSize(Number(value))}
+              >
+                <SelectTrigger className="h-8 text-xs w-full md:w-28">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="12">12 / page</SelectItem>
+                  <SelectItem value="24">24 / page</SelectItem>
+                  <SelectItem value="48">48 / page</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {entities.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}–
+              {Math.min(currentPage * pageSize, totalCount)} of {totalCount}
+            </span>
           </div>
         </div>
 
-        {/* Filters */}
-        <Card className="border border-gray-200">
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search by company name, contact person, or email..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-              <div className="w-full md:w-48">
-                <Select
-                  value={entityTypeFilter}
-                  onValueChange={setEntityTypeFilter}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    {entityTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-full md:w-32">
-                <Select
-                  value={pageSize.toString()}
-                  onValueChange={(value) => setPageSize(Number(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="12">12 / page</SelectItem>
-                    <SelectItem value="24">24 / page</SelectItem>
-                    <SelectItem value="48">48 / page</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="mt-3 text-sm text-gray-600">
-              Showing{" "}
-              {entities.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{" "}
-              {Math.min(currentPage * pageSize, totalCount)} of {totalCount}{" "}
-              entities
-            </div>
-          </CardContent>
-        </Card>
+        {/* Selection bar */}
+        {entities.length > 0 && (
+          <div className="flex items-center gap-3 text-sm">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={
+                  selectedIds.size > 0 && selectedIds.size === entities.length
+                }
+                onChange={toggleSelectAll}
+                className="rounded border-gray-300"
+              />
+              <span className="text-xs text-muted-foreground">
+                {selectedIds.size > 0
+                  ? `${selectedIds.size} selected`
+                  : "Select all"}
+              </span>
+            </label>
+            {selectedIds.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                <Trash2 className="h-3 w-3 mr-1" />
+                Delete {selectedIds.size}
+              </Button>
+            )}
+          </div>
+        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
           {paginatedEntities.length === 0 ? (
-            <Card className="col-span-full">
-              <CardContent className="py-12 text-center">
-                <p className="text-gray-500">
-                  {totalCount === 0
-                    ? "No entities found. Create your first entity!"
-                    : "No entities match your filters."}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="col-span-full py-12 text-center text-sm text-muted-foreground">
+              {totalCount === 0
+                ? "No entities found. Create your first entity!"
+                : "No entities match your filters."}
+            </div>
           ) : (
             paginatedEntities.map((entity) => (
               <Card
                 key={entity.id}
-                className="border border-gray-200 hover:shadow-md transition-all"
+                className="group border-border/60 hover:shadow-sm transition-all"
                 data-testid="entity-card"
               >
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Building className="h-4 w-4 text-gray-500" />
-                          <h3 className="font-semibold text-lg font-heading">
-                            {entity.company_name}
-                          </h3>
-                        </div>
+                <CardContent className="p-3">
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(entity.id)}
+                      onChange={() => toggleSelect(entity.id)}
+                      className="mt-0.5 rounded border-gray-300 h-3.5 w-3.5"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xs font-semibold truncate leading-snug">
+                        {entity.company_name}
+                      </h3>
+                      <div className="mt-1">
                         {getEntityTypeBadge(entity.entity_type)}
                       </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/entities/${entity.id}`)}
-                          data-testid="view-entity-btn"
-                        >
-                          <Eye className="h-4 w-4 text-blue-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            navigate(`/entities/edit/${entity.id}`)
-                          }
-                          data-testid="edit-entity-btn"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(entity)}
-                          data-testid="delete-entity-btn"
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
+                      <div className="mt-2 space-y-0.5 text-[11px] text-muted-foreground">
+                        <p className="truncate">{entity.contact_person}</p>
+                        {entity.phone && <p className="font-mono">{entity.phone}</p>}
+                        {entity.email && <p className="truncate">{entity.email}</p>}
+                        {entity.city && <p>{entity.city}{entity.state ? `, ${entity.state}` : ""}</p>}
                       </div>
                     </div>
-
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <span className="font-medium">Contact:</span>
-                        <span>{entity.contact_person}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Phone className="h-3 w-3" />
-                        <span className="font-mono text-xs">
-                          {entity.phone}
-                        </span>
-                      </div>
-                      {entity.email && (
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <Mail className="h-3 w-3" />
-                          <span className="font-mono text-xs">
-                            {entity.email}
-                          </span>
-                        </div>
-                      )}
-                      {entity.city && entity.state && (
-                        <div className="text-gray-600">
-                          <span>
-                            {entity.city}, {entity.state}
-                          </span>
-                        </div>
-                      )}
-                      {entity.gstin && (
-                        <div className="text-gray-600">
-                          <span className="font-medium">GSTIN:</span>{" "}
-                          <span className="font-mono text-xs">
-                            {entity.gstin}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                  </div>
+                  <div className="flex gap-0.5 mt-2 pt-2 border-t border-border/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => navigate(`/entities/${entity.id}`)}>
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => navigate(`/entities/edit/${entity.id}`)}>
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDelete(entity)}>
+                      <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -531,13 +549,41 @@ const Entities = () => {
           </AlertDialogContent>
         </AlertDialog>
 
+        {/* Bulk Delete Confirmation */}
+        <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Delete {selectedIds.size} entities?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the selected entities. This action
+                cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => bulkDeleteMutation.mutate(selectedIds)}
+                className="bg-red-600 hover:bg-red-700"
+                disabled={bulkDeleteMutation.isPending}
+              >
+                {bulkDeleteMutation.isPending
+                  ? "Deleting..."
+                  : `Delete ${selectedIds.size}`}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <ImportWizard
         open={importOpen}
         onClose={() => setImportOpen(false)}
         entityType="entity"
-        onImportComplete={() => queryClient.invalidateQueries({ queryKey: ["entities"] })}
+        onImportComplete={() =>
+          queryClient.invalidateQueries({ queryKey: ["entities"] })
+        }
       />
     </Layout>
   );

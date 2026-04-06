@@ -126,6 +126,7 @@ async def list_factory_orders(
     result = await factory_order_service.list_orders(
         page=page, page_size=page_size, status=status, search=search,
         factory_name=factory_name, sop_id=sop_id, current_state_id=current_state_id,
+        current_user_id=current_user.id, is_superuser=current_user.is_superuser,
     )
     result["items"] = [_factory_order_response(doc) for doc in result["items"]]
     return result
@@ -522,6 +523,8 @@ async def list_rmas(
         is_warranty=is_warranty,
         sop_id=sop_id,
         current_state_id=current_state_id,
+        current_user_id=current_user.id,
+        is_superuser=current_user.is_superuser,
     )
     result["items"] = [_rma_response(doc) for doc in result["items"]]
     return result

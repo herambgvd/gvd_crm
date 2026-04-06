@@ -25,7 +25,7 @@ class EntityService(BaseCRUDService):
         query = {"is_deleted": {"$ne": True}}
 
         if entity_type:
-            query["entity_type"] = entity_type
+            query["entity_type"] = {"$regex": f"^{re.escape(entity_type)}$", "$options": "i"}
         if status:
             query["status"] = status
         if city:
@@ -56,7 +56,7 @@ class EntityService(BaseCRUDService):
         """Quick-search for entity connections (autocomplete), with optional type filter."""
         query = {"is_deleted": {"$ne": True}, "status": {"$ne": "inactive"}}
         if entity_type:
-            query["entity_type"] = entity_type
+            query["entity_type"] = {"$regex": f"^{re.escape(entity_type)}$", "$options": "i"}
         if term:
             escaped = re.escape(term)
             query["$or"] = [
@@ -77,7 +77,7 @@ class EntityService(BaseCRUDService):
         query = {
             "is_deleted": {"$ne": True},
             "status": {"$ne": "inactive"},
-            "entity_type": entity_type,
+            "entity_type": {"$regex": f"^{re.escape(entity_type)}$", "$options": "i"},
         }
         if term:
             escaped = re.escape(term)
