@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "../../../components";
-import { fetchEntities, deleteEntity, bulkUploadEntities } from "../api";
+import { fetchEntities, deleteEntity } from "../api";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
 import { Badge } from "../../../components/ui/badge";
@@ -14,7 +14,6 @@ import {
   Phone,
   Mail,
   Upload,
-  Download,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -41,12 +40,6 @@ import {
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../../components/ui/tabs";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -66,10 +59,6 @@ const Entities = () => {
   const [entityToDelete, setEntityToDelete] = useState(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [entityToView, setEntityToView] = useState(null);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [uploadType, setUploadType] = useState("excel");
-  const [excelFile, setExcelFile] = useState(null);
-  const [googleSheetUrl, setGoogleSheetUrl] = useState("");
 
   // Filter and pagination states
   const [searchQuery, setSearchQuery] = useState("");
@@ -122,30 +111,6 @@ const Entities = () => {
     },
   });
 
-  const bulkUploadMutation = useMutation({
-    mutationFn: bulkUploadEntities,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries(["entities"]);
-      toast.success(`Successfully uploaded ${data.success_count} entities!`);
-      if (data.errors?.length > 0) {
-        toast.warning(`${data.errors.length} entities failed to upload`);
-      }
-      setUploadDialogOpen(false);
-      setExcelFile(null);
-      setGoogleSheetUrl("");
-      setUploadType("excel");
-    },
-    onError: (error) => {
-      const detail = error.response?.data?.detail;
-      const message = Array.isArray(detail)
-        ? detail.map((e) => e.msg || String(e)).join(". ")
-        : typeof detail === "string"
-          ? detail
-          : "Failed to upload entities";
-      toast.error(message);
-    },
-  });
-
   const handleView = (entity) => {
     setEntityToView(entity);
     setViewDialogOpen(true);
@@ -160,97 +125,6 @@ const Entities = () => {
     if (entityToDelete) {
       deleteMutation.mutate(entityToDelete.id);
     }
-  };
-
-  const handleExcelFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (
-        !file.name.endsWith(".xlsx") &&
-        !file.name.endsWith(".xls") &&
-        !file.name.endsWith(".csv")
-      ) {
-        toast.error("Please upload an Excel or CSV file");
-        return;
-      }
-      setExcelFile(file);
-    }
-  };
-
-  const handleBulkUpload = () => {
-    if (uploadType === "excel" && !excelFile) {
-      toast.error("Please select an Excel file");
-      return;
-    }
-
-    if (uploadType === "sheets" && !googleSheetUrl.trim()) {
-      toast.error("Please enter a Google Sheets URL");
-      return;
-    }
-
-    const formData = new FormData();
-
-    if (uploadType === "excel") {
-      formData.append("file", excelFile);
-    } else {
-      formData.append("google_sheet_url", googleSheetUrl.trim());
-    }
-
-    bulkUploadMutation.mutate(formData);
-  };
-
-  const downloadTemplate = () => {
-    const headers = [
-      "entity_type",
-      "company_name",
-      "contact_person",
-      "email",
-      "phone",
-      "address",
-      "city",
-      "state",
-      "gstin",
-      "notes",
-    ];
-    const sampleData = [
-      [
-        "consultant",
-        "Tech Solutions Pvt Ltd",
-        "John Doe",
-        "john@techsolutions.com",
-        "9876543210",
-        "123 Business Park",
-        "Mumbai",
-        "Maharashtra",
-        "27ABCDE1234F1Z5",
-        "Preferred consultant for corporate projects",
-      ],
-      [
-        "dealer",
-        "Security Systems Inc",
-        "Jane Smith",
-        "jane@securitysystems.com",
-        "9876543211",
-        "456 Market Street",
-        "Delhi",
-        "Delhi",
-        "07XYZAB5678C2D1",
-        "Authorized dealer since 2020",
-      ],
-    ];
-
-    const csvContent = [
-      headers.join(","),
-      ...sampleData.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "entity_upload_template.csv";
-    a.click();
-    window.URL.revokeObjectURL(url);
   };
 
   const getEntityTypeBadge = (type) => {
@@ -299,10 +173,6 @@ const Entities = () => {
             <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
               <Upload className="mr-1.5 h-3.5 w-3.5" />
               Import
-            </Button>
-            <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              Bulk Upload
             </Button>
             <Button
               onClick={() => navigate("/entities/new")}
@@ -661,142 +531,6 @@ const Entities = () => {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Bulk Upload Dialog */}
-        <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Bulk Upload Entities</DialogTitle>
-              <DialogDescription>
-                Upload entities in bulk using Excel file or Google Sheets
-              </DialogDescription>
-            </DialogHeader>
-
-            <Tabs
-              value={uploadType}
-              onValueChange={setUploadType}
-              className="w-full"
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="excel">Excel Upload</TabsTrigger>
-                <TabsTrigger value="sheets">Google Sheets</TabsTrigger>
-              </TabsList>
-
-              {/* Excel Upload Tab */}
-              <TabsContent value="excel" className="space-y-6 py-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Download Template</Label>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={downloadTemplate}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download CSV Template
-                    </Button>
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    Download the template, fill in your entity data, and upload
-                    it below.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="excel_file">
-                    Excel File (.xlsx, .xls, .csv) *
-                  </Label>
-                  <Input
-                    id="excel_file"
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={handleExcelFileChange}
-                  />
-                  {excelFile && (
-                    <p className="text-sm text-green-600">
-                      Selected: {excelFile.name}
-                    </p>
-                  )}
-                </div>
-              </TabsContent>
-
-              {/* Google Sheets Tab */}
-              <TabsContent value="sheets" className="space-y-6 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="google_sheet_url">Google Sheets URL *</Label>
-                  <Input
-                    id="google_sheet_url"
-                    type="url"
-                    value={googleSheetUrl}
-                    onChange={(e) => setGoogleSheetUrl(e.target.value)}
-                    placeholder="https://docs.google.com/spreadsheets/d/..."
-                  />
-                  <p className="text-sm text-gray-500">
-                    Paste your Google Sheets shareable link. Make sure the sheet
-                    is set to "Anyone with the link can view"
-                  </p>
-                </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <h4 className="font-medium text-sm mb-2">
-                    How to share your Google Sheet:
-                  </h4>
-                  <ol className="text-sm space-y-1 text-gray-600">
-                    <li>1. Open your Google Sheet</li>
-                    <li>2. Click "Share" button (top right)</li>
-                    <li>3. Change to "Anyone with the link"</li>
-                    <li>4. Set permission to "Viewer"</li>
-                    <li>5. Click "Copy link" and paste above</li>
-                  </ol>
-                </div>
-              </TabsContent>
-
-              {/* Common Instructions */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-sm mb-2">Instructions:</h4>
-                <ul className="text-sm space-y-1 text-gray-600">
-                  <li>
-                    • Required columns: entity_type, company_name,
-                    contact_person, phone
-                  </li>
-                  <li>
-                    • Optional columns: email, address, city, state, gstin,
-                    notes
-                  </li>
-                  <li>
-                    • entity_type must be: consultant, dealer, si, or
-                    distributor
-                  </li>
-                </ul>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setUploadDialogOpen(false);
-                    setExcelFile(null);
-                    setGoogleSheetUrl("");
-                    setUploadType("excel");
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleBulkUpload}
-                  disabled={
-                    (uploadType === "excel" && !excelFile) ||
-                    (uploadType === "sheets" && !googleSheetUrl.trim()) ||
-                    bulkUploadMutation.isPending
-                  }
-                >
-                  {bulkUploadMutation.isPending
-                    ? "Uploading..."
-                    : "Upload Entities"}
-                </Button>
-              </div>
-            </Tabs>
-          </DialogContent>
-        </Dialog>
       </div>
 
       <ImportWizard
