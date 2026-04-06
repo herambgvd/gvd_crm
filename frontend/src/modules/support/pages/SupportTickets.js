@@ -24,6 +24,11 @@ import {
   ChevronRight,
   TicketIcon,
   Upload,
+  Package,
+  FolderOpen,
+  Tag,
+  MapPin,
+  Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -228,111 +233,119 @@ const SupportTickets = () => {
         />
 
         {/* Tickets Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tickets.map((ticket) => (
-            <Card key={ticket.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="font-semibold text-lg">
-                      {ticket.ticket_number}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {ticket.customer_name}
-                    </p>
-                  </div>
-                  <Badge className={getPriorityBadge(ticket.priority)}>
-                    {ticket.priority}
-                  </Badge>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {tickets.length === 0 ? (
+            <Card className="col-span-full">
+              <CardContent className="py-12 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-muted rounded-full mb-4">
+                  <TicketIcon className="h-8 w-8 text-muted-foreground" />
                 </div>
-
-                <div className="flex items-center gap-2 mb-4">
-                  <StateBadge
-                    stateName={ticket.current_state_name}
-                    stateColor={null}
-                  />
-                </div>
-
-                <div className="space-y-2 text-sm mb-4">
-                  {ticket.product_name && (
-                    <div>
-                      <span className="font-medium">Product:</span>{" "}
-                      {ticket.product_name}
-                    </div>
-                  )}
-                  {ticket.project_name && (
-                    <div>
-                      <span className="font-medium">Project:</span>{" "}
-                      {ticket.project_name}
-                    </div>
-                  )}
-                  {ticket.ticket_type && (
-                    <div>
-                      <span className="font-medium">Type:</span>{" "}
-                      {ticket.ticket_type}
-                    </div>
-                  )}
-                  {ticket.location_site && (
-                    <div>
-                      <span className="font-medium">Location:</span>{" "}
-                      {ticket.location_site}
-                    </div>
-                  )}
-                </div>
-
-                <div className="text-xs text-muted-foreground mb-4">
-                  Created:{" "}
-                  {ticket.created_at
-                    ? new Date(ticket.created_at).toLocaleDateString()
-                    : "N/A"}
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/support/tickets/${ticket.id}`)}
-                  >
-                    <Eye className="h-4 w-4 mr-1" /> View
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(ticket)}
-                    className="ml-auto text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Workflow Transition Actions */}
-                {ticket.sop_id && (
-                  <div className="pt-3 border-t mt-3">
-                    <TransitionActions
-                      recordType="ticket"
-                      recordId={ticket.id}
-                      invalidateKeys={[["support-tickets"]]}
-                    />
-                  </div>
-                )}
+                <h3 className="text-lg font-medium mb-2">No tickets found</h3>
+                <p className="text-muted-foreground">
+                  {searchQuery || stateFilter || priorityFilter !== "all"
+                    ? "Try adjusting your search or filters"
+                    : "Create your first support ticket to get started"}
+                </p>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          ) : (
+            tickets.map((ticket) => (
+              <Card
+                key={ticket.id}
+                className="border border-gray-200 hover:shadow-md transition-all"
+              >
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-bold text-xl font-heading text-blue-600">
+                          {ticket.ticket_number}
+                        </h3>
+                        {ticket.customer_name && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            {ticket.customer_name}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge className={getPriorityBadge(ticket.priority)}>
+                          {ticket.priority}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/support/tickets/${ticket.id}`)}
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(ticket)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </div>
 
-        {tickets.length === 0 && (
-          <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-muted rounded-full mb-4">
-              <TicketIcon className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">No tickets found</h3>
-            <p className="text-muted-foreground">
-              {searchQuery || stateFilter || priorityFilter !== "all"
-                ? "Try adjusting your search or filters"
-                : "Create your first support ticket to get started"}
-            </p>
-          </div>
-        )}
+                    <div className="space-y-2">
+                      {ticket.product_name && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Package className="h-3 w-3" />
+                          <span>{ticket.product_name}</span>
+                        </div>
+                      )}
+                      {ticket.project_name && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <FolderOpen className="h-3 w-3" />
+                          <span>{ticket.project_name}</span>
+                        </div>
+                      )}
+                      {ticket.ticket_type && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Tag className="h-3 w-3" />
+                          <span>{ticket.ticket_type}</span>
+                        </div>
+                      )}
+                      {ticket.location_site && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <MapPin className="h-3 w-3" />
+                          <span>{ticket.location_site}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <StateBadge
+                        stateName={ticket.current_state_name}
+                        stateColor={null}
+                      />
+                    </div>
+
+                    <div className="flex items-center text-xs text-gray-500 font-mono">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      {ticket.created_at
+                        ? new Date(ticket.created_at).toLocaleDateString()
+                        : "N/A"}
+                    </div>
+
+                    {/* Workflow Transition Actions */}
+                    {ticket.sop_id && (
+                      <div className="pt-3 border-t">
+                        <TransitionActions
+                          recordType="ticket"
+                          recordId={ticket.id}
+                          invalidateKeys={[["support-tickets"]]}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
