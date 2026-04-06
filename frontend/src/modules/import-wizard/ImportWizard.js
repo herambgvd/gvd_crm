@@ -272,7 +272,7 @@ export default function ImportWizard({ open, onClose, entityType, onImportComple
         {step === 1 && previewData && (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Showing first {previewData.rows.length} rows. Verify the data looks correct.
+              Showing first {previewData.preview_rows.length} rows. Verify the data looks correct.
             </p>
             <div className="border rounded max-h-48 overflow-auto">
               <table className="w-full text-xs">
@@ -286,7 +286,7 @@ export default function ImportWizard({ open, onClose, entityType, onImportComple
                   </tr>
                 </thead>
                 <tbody>
-                  {previewData.rows.map((row, i) => (
+                  {previewData.preview_rows.map((row, i) => (
                     <tr key={i} className="border-t">
                       {previewData.headers.map((h) => (
                         <td key={h} className="px-2 py-1 whitespace-nowrap max-w-[200px] truncate">
