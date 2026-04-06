@@ -133,7 +133,13 @@ const Entities = () => {
       setUploadType("excel");
     },
     onError: (error) => {
-      toast.error(error.response?.data?.detail || "Failed to upload entities");
+      const detail = error.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((e) => e.msg || String(e)).join(". ")
+        : typeof detail === "string"
+          ? detail
+          : "Failed to upload entities";
+      toast.error(message);
     },
   });
 
@@ -182,7 +188,7 @@ const Entities = () => {
     const formData = new FormData();
 
     if (uploadType === "excel") {
-      formData.append("excel_file", excelFile);
+      formData.append("file", excelFile);
     } else {
       formData.append("google_sheet_url", googleSheetUrl.trim());
     }
