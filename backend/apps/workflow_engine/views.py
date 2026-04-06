@@ -3,8 +3,9 @@ Workflow Engine Views — SOP CRUD and transition execution endpoints.
 """
 
 from typing import Optional
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from apps.authentication.models import User
 from core.auth import get_current_user
@@ -217,3 +218,32 @@ async def get_workflow_stats(
 ):
     """Get state-wise record counts for a module's SOP."""
     return await sop_service.get_stats(module, sop_id)
+
+
+# ────────────────── File Upload for Transitions ──────────────────
+
+UPLOAD_DIR = Path("uploads/transitions")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@router.post("/upload")
+async def upload_transition_file(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Upload a file for use in transition form data. Returns the file URL."""
+    from core.file_utils import validate_upload, safe_filename
+
+    await validate_upload(file)
+    filename = safe_filename(file.filename)
+    filepath = UPLOAD_DIR / filename
+
+    content = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    return {
+        "filename": file.filename,
+        "path": f"uploads/transitions/{filename}",
+        "url": f"/uploads/transitions/{filename}",
+    }

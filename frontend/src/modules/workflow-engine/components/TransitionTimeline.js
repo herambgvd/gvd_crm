@@ -71,12 +71,28 @@ const TransitionTimeline = ({ recordType, recordId }) => {
 
             {/* Form data */}
             {log.form_data && Object.keys(log.form_data).length > 0 && (
-              <div className="mt-1 rounded bg-muted p-2 text-xs">
-                {Object.entries(log.form_data).map(([key, val]) => (
-                  <div key={key}>
-                    <span className="font-medium">{key}:</span> {String(val)}
-                  </div>
-                ))}
+              <div className="mt-1 rounded bg-muted p-2 text-xs space-y-0.5">
+                {Object.entries(log.form_data).map(([key, val]) => {
+                  const strVal = Array.isArray(val) ? val.join(", ") : String(val);
+                  const isUrl = strVal.startsWith("http") && (strVal.includes("/uploads/") || strVal.includes("://"));
+                  return (
+                    <div key={key}>
+                      <span className="font-medium">{key}:</span>{" "}
+                      {isUrl ? (
+                        <a
+                          href={strVal}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline hover:text-primary/80"
+                        >
+                          {strVal.split("/").pop() || "Download"}
+                        </a>
+                      ) : (
+                        strVal
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
 

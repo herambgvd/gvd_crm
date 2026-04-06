@@ -46,6 +46,19 @@ export const deleteSOP = async (id) => {
   return response.data;
 };
 
+// ────────────────── File Upload ──────────────────
+
+export const uploadTransitionFile = async (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await axios.post(
+    `${API}/workflow-engine/upload`,
+    formData,
+    { headers: { ...getAuthHeader(), "Content-Type": "multipart/form-data" } }
+  );
+  return response.data;
+};
+
 // ────────────────── Transitions ──────────────────
 
 export const executeTransition = async (data) => {
