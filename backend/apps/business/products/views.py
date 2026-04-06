@@ -100,7 +100,7 @@ def _comment_response(doc: Dict[str, Any]) -> MovementCommentResponse:
 
 # ──────────────── Product CRUD ────────────────
 
-@router.post("/", response_model=ProductResponse)
+@router.post("", response_model=ProductResponse)
 async def create_product(
     product_data: ProductCreate,
     current_user: User = Depends(require_permission("products:create")),
@@ -130,7 +130,7 @@ async def create_product(
     return _product_response(doc)
 
 
-@router.get("/")
+@router.get("")
 async def get_products(
     current_user: User = Depends(require_permission("products:view")),
     page: int = Query(1, ge=1),

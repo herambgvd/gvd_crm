@@ -20,7 +20,7 @@ def _warehouse_response(doc: Dict[str, Any]) -> WarehouseResponse:
     return WarehouseResponse(**doc)
 
 
-@router.post("/", response_model=WarehouseResponse)
+@router.post("", response_model=WarehouseResponse)
 async def create_warehouse(
     warehouse_data: WarehouseCreate,
     current_user: User = Depends(require_permission("inventory:create")),
@@ -36,7 +36,7 @@ async def create_warehouse(
     return _warehouse_response(doc)
 
 
-@router.get("/")
+@router.get("")
 async def get_warehouses(
     current_user: User = Depends(require_permission("inventory:view")),
     page: int = Query(1, ge=1),

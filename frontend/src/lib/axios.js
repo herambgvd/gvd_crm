@@ -71,15 +71,4 @@ api.interceptors.response.use(
   }
 );
 
-// Ensure API URLs end with trailing slash (FastAPI redirect_slashes compatibility)
-axios.interceptors.request.use((config) => {
-  if (config.url && config.url.includes("/api/v1")) {
-    const [path, query] = config.url.split("?");
-    if (!path.endsWith("/")) {
-      config.url = path + "/" + (query ? `?${query}` : "");
-    }
-  }
-  return config;
-});
-
 export default axios;

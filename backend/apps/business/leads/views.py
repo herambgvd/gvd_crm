@@ -20,7 +20,7 @@ def _lead_response(doc: dict) -> LeadResponse:
 
 # ── CRUD ──
 
-@router.post("/", response_model=LeadResponse)
+@router.post("", response_model=LeadResponse)
 async def create_lead(
     lead_data: LeadCreate,
     current_user: User = Depends(require_permission("leads:create")),
@@ -49,7 +49,7 @@ async def _enrich_with_customer(items: list) -> list:
     return items
 
 
-@router.get("/")
+@router.get("")
 async def get_leads(
     current_user: User = Depends(get_current_user),
     page: int = Query(1, ge=1),
