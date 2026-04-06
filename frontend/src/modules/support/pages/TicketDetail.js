@@ -1,11 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Layout } from "../../../components";
-import {
-  fetchTicket,
-  getTicketMetrics,
-} from "../api";
+import { fetchTicket } from "../api";
 import {
   StateBadge,
   TransitionActions,
@@ -16,51 +13,21 @@ import { Badge } from "../../../components/ui/badge";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "../../../components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../../components/ui/tabs";
 import {
   ArrowLeft,
   Package,
   MapPin,
   Clock,
-  FileText,
-  Settings,
-  Wrench,
-  ArrowUpRight,
-  CheckCircle,
-  MessageSquare,
 } from "lucide-react";
-import { toast } from "sonner";
-
-// Sub-components for different tabs
-import IssueLoggingTab from "../components/IssueLoggingTab";
-import SystemEnvironmentTab from "../components/SystemEnvironmentTab";
-import TroubleshootingActionsTab from "../components/TroubleshootingActionsTab";
-import EscalationTab from "../components/EscalationTab";
-import ResolutionTab from "../components/ResolutionTab";
-import CustomerFeedbackTab from "../components/CustomerFeedbackTab";
 
 const TicketDetail = () => {
   const { id: ticketId } = useParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   const { data: ticketData, isLoading } = useQuery({
     queryKey: ["support-ticket", ticketId],
     queryFn: () => fetchTicket(ticketId),
-  });
-
-  const { data: metrics } = useQuery({
-    queryKey: ["support-ticket-metrics", ticketId],
-    queryFn: () => getTicketMetrics(ticketId),
-    enabled: !!ticketData?.ticket,
   });
 
   const getPriorityBadge = (priority) => {
@@ -220,12 +187,12 @@ const TicketDetail = () => {
                 </div>
                 <div>
                   <span className="font-medium">Created By:</span>{" "}
-                  {ticket.created_by}
+                  {ticket.created_by_name || ticket.created_by}
                 </div>
                 {ticket.assigned_to && (
                   <div>
                     <span className="font-medium">Assigned To:</span>{" "}
-                    {ticket.assigned_to}
+                    {ticket.assigned_to_name || ticket.assigned_to}
                   </div>
                 )}
               </div>
@@ -244,18 +211,6 @@ const TicketDetail = () => {
                   <span className="font-medium">Created:</span>{" "}
                   {new Date(ticket.created_at).toLocaleDateString()}
                 </div>
-                {metrics?.resolution_time_hours && (
-                  <div>
-                    <span className="font-medium">Resolution Time:</span>{" "}
-                    {metrics.resolution_time_hours.toFixed(1)} hrs
-                  </div>
-                )}
-                {ticket.resolved_at && (
-                  <div>
-                    <span className="font-medium">Resolved:</span>{" "}
-                    {new Date(ticket.resolved_at).toLocaleDateString()}
-                  </div>
-                )}
                 {ticket.closed_at && (
                   <div>
                     <span className="font-medium">Closed:</span>{" "}
@@ -267,101 +222,11 @@ const TicketDetail = () => {
           </Card>
         </div>
 
-        {/* Ticket Lifecycle Tabs */}
-        <Tabs defaultValue="timeline" className="space-y-6">
-          <TabsList className="grid grid-cols-7 w-full">
-            <TabsTrigger
-              value="timeline"
-              className="flex items-center gap-2"
-            >
-              <Clock className="h-4 w-4" />
-              Timeline
-            </TabsTrigger>
-            <TabsTrigger
-              value="issue-logging"
-              className="flex items-center gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              Issue Logging
-            </TabsTrigger>
-            <TabsTrigger value="system-env" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              System
-            </TabsTrigger>
-            <TabsTrigger
-              value="troubleshooting"
-              className="flex items-center gap-2"
-            >
-              <Wrench className="h-4 w-4" />
-              Troubleshooting
-            </TabsTrigger>
-            <TabsTrigger value="escalation" className="flex items-center gap-2">
-              <ArrowUpRight className="h-4 w-4" />
-              Escalation
-            </TabsTrigger>
-            <TabsTrigger value="resolution" className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Resolution
-            </TabsTrigger>
-            <TabsTrigger value="feedback" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Feedback
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="timeline" className="space-y-4">
-            <h3 className="font-semibold text-lg">Workflow History</h3>
-            <TransitionTimeline recordType="ticket" recordId={ticketId} />
-          </TabsContent>
-
-          <TabsContent value="issue-logging">
-            <IssueLoggingTab
-              ticketId={ticketId}
-              issueLogging={ticketData.issue_logging}
-              ticketStatus={ticket.status}
-            />
-          </TabsContent>
-
-          <TabsContent value="system-env">
-            <SystemEnvironmentTab
-              ticketId={ticketId}
-              systemEnvironment={ticketData.system_environment}
-              ticketStatus={ticket.status}
-            />
-          </TabsContent>
-
-          <TabsContent value="troubleshooting">
-            <TroubleshootingActionsTab
-              ticketId={ticketId}
-              actions={ticketData.troubleshooting_actions}
-              ticketStatus={ticket.status}
-            />
-          </TabsContent>
-
-          <TabsContent value="escalation">
-            <EscalationTab
-              ticketId={ticketId}
-              escalation={ticketData.escalation}
-              ticketStatus={ticket.status}
-            />
-          </TabsContent>
-
-          <TabsContent value="resolution">
-            <ResolutionTab
-              ticketId={ticketId}
-              resolution={ticketData.resolution}
-              ticketStatus={ticket.status}
-            />
-          </TabsContent>
-
-          <TabsContent value="feedback">
-            <CustomerFeedbackTab
-              ticketId={ticketId}
-              feedback={ticketData.customer_feedback}
-              ticketStatus={ticket.status}
-            />
-          </TabsContent>
-        </Tabs>
+        {/* Workflow History */}
+        <div className="space-y-4">
+          <h3 className="font-semibold text-lg">Workflow History</h3>
+          <TransitionTimeline recordType="ticket" recordId={ticketId} />
+        </div>
       </div>
     </Layout>
   );
