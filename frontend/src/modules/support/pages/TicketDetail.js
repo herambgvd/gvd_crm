@@ -48,7 +48,7 @@ import ResolutionTab from "../components/ResolutionTab";
 import CustomerFeedbackTab from "../components/CustomerFeedbackTab";
 
 const TicketDetail = () => {
-  const { ticketId } = useParams();
+  const { id: ticketId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
