@@ -87,7 +87,6 @@ def create_application() -> FastAPI:
         version=settings.VERSION,
         debug=settings.DEBUG,
         lifespan=lifespan,
-        redirect_slashes=False,
         docs_url="/docs" if settings.DEBUG else None,
         redoc_url="/redoc" if settings.DEBUG else None,
     )
