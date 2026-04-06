@@ -337,7 +337,7 @@ const SOPBuilder = () => {
 
   return (
     <Layout>
-      <div className="space-y-4 max-w-3xl">
+      <div className="space-y-4">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Button
@@ -356,8 +356,8 @@ const SOPBuilder = () => {
         {/* Basic Info */}
         <Card className="border-border/60">
           <CardContent className="p-4 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="md:col-span-2">
                 <Label className="text-xs">SOP Name *</Label>
                 <Input
                   value={name}
@@ -397,46 +397,48 @@ const SOPBuilder = () => {
           </CardContent>
         </Card>
 
-        {/* States */}
-        <Card className="border-border/60">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Pipeline States</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={addState}
-              >
-                <Plus className="mr-1 h-3 w-3" />
-                Add State
-              </Button>
-            </div>
+        {/* Pipeline preview */}
+        {states.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap px-3 py-2 bg-muted/50 rounded-md">
+            {states.map((state, idx) => (
+              <React.Fragment key={state.id}>
+                {idx > 0 && (
+                  <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/60 flex-shrink-0" />
+                )}
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded text-white font-medium"
+                  style={{ backgroundColor: state.color }}
+                >
+                  {state.name}
+                </span>
+              </React.Fragment>
+            ))}
+          </div>
+        )}
 
-            {states.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-6">
-                No states defined yet. Add states to build your pipeline.
-              </p>
-            ) : (
-              <>
-                {/* Pipeline preview */}
-                <div className="flex items-center gap-1 flex-wrap px-3 py-2 bg-muted/50 rounded-md">
-                  {states.map((state, idx) => (
-                    <React.Fragment key={state.id}>
-                      {idx > 0 && (
-                        <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/60 flex-shrink-0" />
-                      )}
-                      <span
-                        className="text-[10px] px-1.5 py-0.5 rounded text-white font-medium"
-                        style={{ backgroundColor: state.color }}
-                      >
-                        {state.name}
-                      </span>
-                    </React.Fragment>
-                  ))}
-                </div>
+        {/* States & Transitions side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* States */}
+          <Card className="border-border/60">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Pipeline States</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={addState}
+                >
+                  <Plus className="mr-1 h-3 w-3" />
+                  Add State
+                </Button>
+              </div>
 
-                {/* Sortable list */}
+              {states.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">
+                  No states defined yet. Add states to build your pipeline.
+                </p>
+              ) : (
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
@@ -458,84 +460,84 @@ const SOPBuilder = () => {
                     </div>
                   </SortableContext>
                 </DndContext>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
 
-        {/* Transitions */}
-        <Card className="border-border/60">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Transitions</h2>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={addTransition}
-                disabled={states.length < 2}
-              >
-                <Plus className="mr-1 h-3 w-3" />
-                Add Transition
-              </Button>
-            </div>
-
-            {transitions.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-6">
-                No transitions defined yet. Add transitions to connect states.
-              </p>
-            ) : (
-              <div className="space-y-1.5">
-                {transitions.map((t) => (
-                  <div
-                    key={t.id}
-                    className="group flex items-center gap-2 px-3 py-2 rounded-md border border-border/60 text-xs"
-                  >
-                    <div className="flex-1 flex items-center gap-1.5">
-                      <span className="font-medium">
-                        {stateMap[t.from_state_id] || "?"}
-                      </span>
-                      <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/60" />
-                      <span className="font-medium">
-                        {stateMap[t.to_state_id] || "?"}
-                      </span>
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] ml-1.5 h-4 px-1.5"
-                      >
-                        {t.name}
-                      </Badge>
-                      {t.form_fields?.length > 0 && (
-                        <span className="text-[10px] text-muted-foreground">
-                          · {t.form_fields.length} field
-                          {t.form_fields.length > 1 ? "s" : ""}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setTransitionDialog(t)}
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => deleteTransition(t.id)}
-                      >
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+          {/* Transitions */}
+          <Card className="border-border/60">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Transitions</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={addTransition}
+                  disabled={states.length < 2}
+                >
+                  <Plus className="mr-1 h-3 w-3" />
+                  Add Transition
+                </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
+
+              {transitions.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-6">
+                  No transitions defined yet. Add transitions to connect states.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {transitions.map((t) => (
+                    <div
+                      key={t.id}
+                      className="group flex items-center gap-2 px-3 py-2 rounded-md border border-border/60 text-xs"
+                    >
+                      <div className="flex-1 flex items-center gap-1.5 flex-wrap">
+                        <span className="font-medium">
+                          {stateMap[t.from_state_id] || "?"}
+                        </span>
+                        <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/60" />
+                        <span className="font-medium">
+                          {stateMap[t.to_state_id] || "?"}
+                        </span>
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] ml-1.5 h-4 px-1.5"
+                        >
+                          {t.name}
+                        </Badge>
+                        {t.form_fields?.length > 0 && (
+                          <span className="text-[10px] text-muted-foreground">
+                            · {t.form_fields.length} field
+                            {t.form_fields.length > 1 ? "s" : ""}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setTransitionDialog(t)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => deleteTransition(t.id)}
+                        >
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Save */}
         <div className="flex justify-end gap-2 pt-1">
