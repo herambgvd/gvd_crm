@@ -100,9 +100,20 @@ export default function ImportWizard({ open, onClose, entityType, onImportComple
     setLoading(true);
     try {
       const data =
-        source === "file" ? await previewFile(file) : await previewGoogleSheet(googleUrl);
+        source === "file"
+          ? await previewFile(file, selectedEntity)
+          : await previewGoogleSheet(googleUrl, selectedEntity);
+
+      // If system_fields not in response, build from entities data
+      let sysFields = data.system_fields || [];
+      if (sysFields.length === 0 && entities?.entities) {
+        const ent = entities.entities.find((e) => e.key === selectedEntity);
+        if (ent) sysFields = ent.fields || [];
+      }
+      data.system_fields = sysFields;
+
       setPreviewData(data);
-      setColumnMapping(autoMatch(data.headers, data.system_fields || []));
+      setColumnMapping(autoMatch(data.headers, sysFields));
       setStep(1);
     } catch (err) {
       toast.error(err?.response?.data?.detail || "Failed to preview data");
@@ -179,21 +190,24 @@ export default function ImportWizard({ open, onClose, entityType, onImportComple
         {/* Step 0: Source */}
         {step === 0 && (
           <div className="space-y-4">
-            <div>
-              <Label className="text-xs mb-1">Entity Type</Label>
-              <Select value={selectedEntity} onValueChange={setSelectedEntity}>
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Select entity..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {(entities?.entities || []).map((e) => (
-                    <SelectItem key={e.key} value={e.key}>
-                      {e.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Only show entity selector if not pre-set via prop */}
+            {!entityType && (
+              <div>
+                <Label className="text-xs mb-1">Entity Type</Label>
+                <Select value={selectedEntity} onValueChange={setSelectedEntity}>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="Select entity..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(entities?.entities || []).map((e) => (
+                      <SelectItem key={e.key} value={e.key}>
+                        {e.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="flex gap-2">
               <Button

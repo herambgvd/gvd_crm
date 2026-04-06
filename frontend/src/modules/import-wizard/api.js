@@ -7,9 +7,10 @@ export const fetchImportableEntities = async () => {
   return response.data;
 };
 
-export const previewFile = async (file) => {
+export const previewFile = async (file, entityType) => {
   const formData = new FormData();
   formData.append("file", file);
+  if (entityType) formData.append("entity_type", entityType);
   const response = await axios.post(`${API}/import/preview`, formData, {
     headers: { ...getAuthHeader(), "Content-Type": "multipart/form-data" },
   });
@@ -27,11 +28,11 @@ export const executeImport = async (file, entityType, columnMapping) => {
   return response.data;
 };
 
-export const previewGoogleSheet = async (url) => {
+export const previewGoogleSheet = async (url, entityType) => {
   const response = await axios.post(
     `${API}/import/google-sheets/preview`,
     { url },
-    { headers: getAuthHeader() }
+    { headers: getAuthHeader(), params: { entity_type: entityType || "" } }
   );
   return response.data;
 };

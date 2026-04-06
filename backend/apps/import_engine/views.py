@@ -6,7 +6,7 @@ import re
 import json
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
-from typing import Dict, Optional
+from typing import Dict
 
 import httpx
 
@@ -19,6 +19,14 @@ from .service import (
 )
 
 router = APIRouter()
+
+ENTITY_LABELS = {
+    "lead": "Leads",
+    "customer": "Customers",
+    "entity": "Entities",
+    "product": "Products",
+    "ticket": "Support Tickets",
+}
 
 
 # ─────────────────── Schemas ───────────────────
@@ -68,36 +76,50 @@ def _parse_upload(filename: str, content: bytes):
         raise HTTPException(status_code=400, detail="Unsupported file type. Use CSV or Excel (.xlsx).")
 
 
+def _get_system_fields(entity_type: str):
+    """Return system fields as list of {key, label, type, required} for frontend."""
+    fields = ENTITY_FIELDS.get(entity_type, {})
+    result = []
+    for field_name, fd in fields.items():
+        label = field_name.replace("_", " ").title()
+        result.append({
+            "key": field_name,
+            "label": label,
+            "type": fd.get("type", "string"),
+            "required": fd.get("required", False),
+        })
+    return result
+
+
 # ─────────────────── Endpoints ───────────────────
 
 @router.get("/entities")
 async def list_importable_entities(current_user=Depends(get_current_user)):
     """List importable entity types with their field definitions."""
-    return {
-        entity_type: {
-            field_name: {
-                "type": fd.get("type", "string"),
-                "required": fd.get("required", False),
-                **({"default": fd["default"]} if "default" in fd else {}),
-            }
-            for field_name, fd in fields.items()
-        }
-        for entity_type, fields in ENTITY_FIELDS.items()
-    }
+    entities = []
+    for key in ENTITY_FIELDS:
+        entities.append({
+            "key": key,
+            "label": ENTITY_LABELS.get(key, key.title()),
+            "fields": _get_system_fields(key),
+        })
+    return {"entities": entities}
 
 
 @router.post("/preview")
-async def preview_file(
+async def preview_file_endpoint(
     file: UploadFile = File(...),
+    entity_type: str = Form(""),
     current_user=Depends(get_current_user),
 ):
-    """Upload CSV/Excel and return headers + first 5 rows for mapping."""
+    """Upload CSV/Excel and return headers + first 5 rows + system fields."""
     content = await file.read()
     headers, rows = _parse_upload(file.filename, content)
     return {
         "headers": headers,
         "preview_rows": rows[:5],
         "total_rows": len(rows),
+        "system_fields": _get_system_fields(entity_type) if entity_type else [],
     }
 
 
@@ -105,7 +127,7 @@ async def preview_file(
 async def execute_file_import(
     file: UploadFile = File(...),
     entity_type: str = Form(...),
-    column_mapping: str = Form(...),
+    column_mapping_json: str = Form(...),
     current_user=Depends(get_current_user),
 ):
     """Execute import from uploaded CSV/Excel file."""
@@ -113,9 +135,9 @@ async def execute_file_import(
         raise HTTPException(status_code=400, detail=f"Unknown entity type: {entity_type}")
 
     try:
-        mapping = json.loads(column_mapping)
+        mapping = json.loads(column_mapping_json)
     except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="column_mapping must be valid JSON")
+        raise HTTPException(status_code=400, detail="column_mapping_json must be valid JSON")
 
     content = await file.read()
     headers, rows = _parse_upload(file.filename, content)
@@ -133,6 +155,7 @@ async def execute_file_import(
 @router.post("/google-sheets/preview")
 async def preview_google_sheet(
     body: GoogleSheetsPreviewRequest,
+    entity_type: str = "",
     current_user=Depends(get_current_user),
 ):
     """Fetch a public Google Sheet and return headers + first 5 rows."""
@@ -142,6 +165,7 @@ async def preview_google_sheet(
         "headers": headers,
         "preview_rows": rows[:5],
         "total_rows": len(rows),
+        "system_fields": _get_system_fields(entity_type) if entity_type else [],
     }
 
 
