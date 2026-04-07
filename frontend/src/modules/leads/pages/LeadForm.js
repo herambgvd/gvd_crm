@@ -643,8 +643,11 @@ const LeadForm = () => {
       toast.success("Lead updated successfully!");
       navigate("/leads");
     },
-    onError: (err) =>
-      toast.error(err.response?.data?.detail || "Failed to update lead"),
+    onError: (err) => {
+      const detail = err.response?.data?.detail;
+      const msg = typeof detail === "string" ? detail : "Failed to update lead";
+      toast.error(msg);
+    },
   });
 
   const deleteMutation = useMutation({
