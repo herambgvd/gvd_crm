@@ -675,6 +675,7 @@ const LeadForm = () => {
 
     // Remove sop_id during edit — not part of LeadUpdate schema
     if (isEdit) delete submitData.sop_id;
+    if (!submitData.priority) delete submitData.priority;
 
     if (
       submitData.expected_value !== "" &&
