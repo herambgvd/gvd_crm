@@ -113,6 +113,8 @@ class PurchaseOrder(BaseModel):
     delivery_address: Optional[Dict[str, str]] = None
     payment_terms: Optional[str] = None
     notes: Optional[str] = None
+    lead_id: Optional[str] = None
+    file_url: Optional[str] = None          # uploaded PO document from client
     created_by: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

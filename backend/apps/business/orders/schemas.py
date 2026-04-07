@@ -219,12 +219,14 @@ class PurchaseOrderCreate(BaseModel):
     po_number: str = Field(..., min_length=1, max_length=100)
     vendor_id: str
     sales_order_id: Optional[str] = None
+    lead_id: Optional[str] = None
     items: List[PurchaseOrderItemCreate] = Field(default_factory=list)
     currency: str = "USD"
     expected_delivery_date: Optional[datetime] = None
     delivery_address: Optional[Dict[str, str]] = None
     payment_terms: Optional[str] = None
     notes: Optional[str] = None
+    file_url: Optional[str] = None
 
 class PurchaseOrderUpdate(BaseModel):
     items: Optional[List[PurchaseOrderItemCreate]] = None
@@ -235,6 +237,7 @@ class PurchaseOrderUpdate(BaseModel):
     delivery_address: Optional[Dict[str, str]] = None
     payment_terms: Optional[str] = None
     notes: Optional[str] = None
+    file_url: Optional[str] = None
 
 class PurchaseOrderResponse(BaseModel):
     id: str = ""
@@ -254,6 +257,8 @@ class PurchaseOrderResponse(BaseModel):
     delivery_address: Optional[Dict[str, str]] = None
     payment_terms: Optional[str] = None
     notes: Optional[str] = None
+    lead_id: Optional[str] = None
+    file_url: Optional[str] = None
     sop_id: Optional[str] = None
     current_state_id: Optional[str] = None
     current_state_name: Optional[str] = None

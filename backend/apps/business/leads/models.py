@@ -68,6 +68,8 @@ class LeadInvolvement(BaseModel):
     entity_id: str                      # entity (consultant / distributor / SI)
     involvement_type: str               # "consultant", "distributor", "si"
     status: str = "active"              # active, negotiation, on_hold, win, lose
+    share_percentage: Optional[float] = None   # entity's share in project (%)
+    share_amount: Optional[float] = None       # auto-calculated from percentage × project value
     notes: Optional[str] = None
     assigned_boqs: List[str] = Field(default_factory=list)
     sales_order_ids: List[str] = Field(default_factory=list)

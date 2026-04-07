@@ -307,6 +307,7 @@ class PurchaseOrderService(BaseCRUDService):
         page_size: int = 20,
         status: Optional[str] = None,
         vendor_id: Optional[str] = None,
+        lead_id: Optional[str] = None,
         search: Optional[str] = None,
         sort_by: str = "created_at",
         sort_order: int = -1,
@@ -324,6 +325,8 @@ class PurchaseOrderService(BaseCRUDService):
             query["status"] = status
         if vendor_id:
             query["vendor_id"] = vendor_id
+        if lead_id:
+            query["lead_id"] = lead_id
         if search:
             escaped = re.escape(search)
             query["$or"] = [

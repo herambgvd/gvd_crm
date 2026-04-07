@@ -28,7 +28,7 @@ async def get_invoice_stats(
     return await invoice_service.get_stats()
 
 
-@router.get("/invoices/")
+@router.get("/invoices")
 async def get_invoices(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -56,7 +56,7 @@ async def get_invoice(
     return invoice
 
 
-@router.post("/invoices/")
+@router.post("/invoices")
 async def create_invoice(
     data: InvoiceCreate,
     current_user=Depends(require_permission("finance:create")),
@@ -148,7 +148,7 @@ async def get_payment_stats(
     return await payment_service.get_stats()
 
 
-@router.get("/payments/")
+@router.get("/payments")
 async def get_payments(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -178,7 +178,7 @@ async def get_payment(
     return payment
 
 
-@router.post("/payments/")
+@router.post("/payments")
 async def create_payment(
     data: PaymentCreate,
     current_user=Depends(require_permission("finance:create")),

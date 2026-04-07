@@ -22,7 +22,7 @@ router = APIRouter(tags=["orders"])
 
 # ─────────────────── BOQ Endpoints ───────────────────
 
-@router.get("/boqs/")
+@router.get("/boqs")
 async def get_boqs(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=1000),
@@ -89,7 +89,7 @@ async def get_boq_version_history(
     }
 
 
-@router.post("/boqs/")
+@router.post("/boqs")
 async def create_boq(
     data: BOQCreate,
     current_user=Depends(require_permission("orders:create")),
@@ -137,7 +137,7 @@ async def get_sales_order_stats(
     return await sales_order_service.get_stats()
 
 
-@router.get("/sales-orders/")
+@router.get("/sales-orders")
 async def get_sales_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=1000),
@@ -234,7 +234,7 @@ async def get_sales_order(
     return order
 
 
-@router.post("/sales-orders/")
+@router.post("/sales-orders")
 async def create_sales_order(
     data: SalesOrderCreate,
     current_user=Depends(require_permission("orders:create")),
@@ -282,19 +282,20 @@ async def get_purchase_order_stats(
     return await purchase_order_service.get_stats()
 
 
-@router.get("/purchase-orders/")
+@router.get("/purchase-orders")
 async def get_purchase_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status: Optional[str] = Query(None),
     vendor_id: Optional[str] = Query(None),
+    lead_id: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     current_user=Depends(require_permission("orders:view")),
 ):
     """List purchase orders with server-side pagination."""
     return await purchase_order_service.list_purchase_orders(
         page=page, page_size=page_size,
-        status=status, vendor_id=vendor_id, search=search,
+        status=status, vendor_id=vendor_id, lead_id=lead_id, search=search,
         current_user_id=current_user.id, is_superuser=current_user.is_superuser,
     )
 
@@ -311,7 +312,7 @@ async def get_purchase_order(
     return order
 
 
-@router.post("/purchase-orders/")
+@router.post("/purchase-orders")
 async def create_purchase_order(
     data: PurchaseOrderCreate,
     current_user=Depends(require_permission("orders:create")),

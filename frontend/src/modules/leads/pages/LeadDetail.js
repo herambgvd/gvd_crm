@@ -38,8 +38,10 @@ import {
 import { fetchInvoices } from "../../invoices/api";
 import {
   fetchPurchaseOrders,
+  createPurchaseOrder,
   deletePurchaseOrder,
 } from "../../purchase-orders/api";
+import { uploadTransitionFile } from "../../workflow-engine/api";
 import { fetchPayments } from "../../payments/api";
 import { fetchWarranties } from "../../warranties/api";
 import { fetchUsers } from "../../settings/api";
@@ -162,6 +164,8 @@ const LeadDetail = () => {
   const [assignedWarranties, setAssignedWarranties] = React.useState([]);
   const [involvementStatus, setInvolvementStatus] = React.useState("active");
   const [involvementNotes, setInvolvementNotes] = React.useState("");
+  const [sharePercentage, setSharePercentage] = React.useState("");
+  const [shareAmount, setShareAmount] = React.useState("");
   const [additionalInfo, setAdditionalInfo] = React.useState("");
   const [additionalInfoPairs, setAdditionalInfoPairs] = React.useState([
     { key: "", value: "" },
@@ -184,8 +188,8 @@ const LeadDetail = () => {
   });
 
   const { data: allBOQs } = useQuery({
-    queryKey: ["boqs"],
-    queryFn: fetchBOQs,
+    queryKey: ["boqs", id],
+    queryFn: () => fetchBOQs({ lead_id: id, page_size: 100 }),
     enabled: !!id,
   });
 
@@ -197,25 +201,25 @@ const LeadDetail = () => {
 
   const { data: allInvoices } = useQuery({
     queryKey: ["invoices"],
-    queryFn: fetchInvoices,
+    queryFn: () => fetchInvoices({ page_size: 100 }),
     enabled: !!id,
   });
 
   const { data: allPurchaseOrders } = useQuery({
-    queryKey: ["purchaseOrders"],
-    queryFn: fetchPurchaseOrders,
+    queryKey: ["purchaseOrders", id],
+    queryFn: () => fetchPurchaseOrders({ lead_id: id, page_size: 100 }),
     enabled: !!id,
   });
 
   const { data: allPayments } = useQuery({
     queryKey: ["payments"],
-    queryFn: fetchPayments,
+    queryFn: () => fetchPayments({ page_size: 100 }),
     enabled: !!id,
   });
 
   const { data: allWarranties } = useQuery({
-    queryKey: ["warranties"],
-    queryFn: fetchWarranties,
+    queryKey: ["warranties", id],
+    queryFn: () => fetchWarranties(),
     enabled: !!id,
   });
 
@@ -251,9 +255,7 @@ const LeadDetail = () => {
   });
 
   // Involvement queries — always loaded (shown in info card + involvement tab)
-  const {
-    data: entities,
-  } = useQuery({
+  const { data: entities } = useQuery({
     queryKey: ["entities"],
     queryFn: () => fetchEntities(),
     enabled: !!id,
@@ -267,19 +269,30 @@ const LeadDetail = () => {
 
   // Entity search for involvement dialog
   React.useEffect(() => {
-    if (!involvementDialogOpen || !entitySearchQuery || entitySearchQuery.length < 1) {
+    if (
+      !involvementDialogOpen ||
+      !entitySearchQuery ||
+      entitySearchQuery.length < 1
+    ) {
       setEntitySearchResults([]);
       return;
     }
-    const typeFilter = involvementType === "consultant" ? "consultant"
-      : involvementType === "distributor" ? "distributor" : null;
+    const typeFilter =
+      involvementType === "consultant"
+        ? "consultant"
+        : involvementType === "distributor"
+          ? "distributor"
+          : null;
     setEntitySearching(true);
     const t = setTimeout(async () => {
       try {
         const data = await searchEntities(entitySearchQuery, 15, typeFilter);
         setEntitySearchResults(data);
-      } catch { setEntitySearchResults([]); }
-      finally { setEntitySearching(false); }
+      } catch {
+        setEntitySearchResults([]);
+      } finally {
+        setEntitySearching(false);
+      }
     }, 300);
     return () => clearTimeout(t);
   }, [entitySearchQuery, involvementType, involvementDialogOpen]);
@@ -464,14 +477,19 @@ const LeadDetail = () => {
     onSuccess: async (_, variables) => {
       queryClient.invalidateQueries(["lead-involvements", id]);
       // Sync lead.consultant_entity_id when consultant involvement is updated
-      if (variables.data.involvement_type === "consultant" && variables.data.entity_id) {
+      if (
+        variables.data.involvement_type === "consultant" &&
+        variables.data.entity_id
+      ) {
         try {
           await updateLead(id, {
             consultant_entity_id: variables.data.entity_id,
             is_consultant_involved: true,
           });
           queryClient.invalidateQueries(["lead", id]);
-        } catch { /* non-critical */ }
+        } catch {
+          /* non-critical */
+        }
       }
       toast.success("Involvement updated successfully!");
       setInvolvementDialogOpen(false);
@@ -584,6 +602,8 @@ const LeadDetail = () => {
     setAssignedWarranties([]);
     setInvolvementStatus("active");
     setInvolvementNotes("");
+    setSharePercentage("");
+    setShareAmount("");
     setAdditionalInfo("");
     setAdditionalInfoPairs([{ key: "", value: "" }]);
     setEditingInvolvement(null);
@@ -645,6 +665,8 @@ const LeadDetail = () => {
       payment_ids: assignedPayments || [],
       warranty_ids: assignedWarranties || [],
       status: involvementStatus,
+      share_percentage: sharePercentage !== "" ? Number(sharePercentage) : null,
+      share_amount: shareAmount !== "" ? Number(shareAmount) : null,
       additional_information: additionalInfoObject,
     };
 
@@ -662,7 +684,10 @@ const LeadDetail = () => {
     setEditingInvolvement(involvement);
     setSelectedEntityId(involvement.entity_id);
     // Pre-populate entity display so the search box shows current entity name
-    setSelectedEntityObj({ id: involvement.entity_id, company_name: involvement.entity_name || involvement.entity_id });
+    setSelectedEntityObj({
+      id: involvement.entity_id,
+      company_name: involvement.entity_name || involvement.entity_id,
+    });
     setEntitySearchQuery(involvement.entity_name || "");
     setInvolvementType(involvement.involvement_type);
     setAssignedBOQs(involvement.assigned_boqs || []);
@@ -671,6 +696,8 @@ const LeadDetail = () => {
     setAssignedPayments(involvement.payment_ids || []);
     setAssignedWarranties(involvement.warranty_ids || []);
     setInvolvementStatus(involvement.status);
+    setSharePercentage(involvement.share_percentage ?? "");
+    setShareAmount(involvement.share_amount ?? "");
     setInvolvementNotes(involvement.notes || "");
 
     // Convert additional_information object to key-value pairs
@@ -717,19 +744,22 @@ const LeadDetail = () => {
 
   const allLeadBOQs = allBOQs?.items?.filter((b) => b.lead_id === id) || [];
   // Filter BOQs by bidder entity via involvements
-  const boqs = boqBidderFilter === "all"
-    ? allLeadBOQs
-    : allLeadBOQs.filter((b) => {
-        const inv = involvements?.find((i) => i.id === boqBidderFilter || i.entity_id === boqBidderFilter);
-        return inv ? inv.assigned_boqs?.includes(b.id) : false;
-      });
+  const boqs =
+    boqBidderFilter === "all"
+      ? allLeadBOQs
+      : allLeadBOQs.filter((b) => {
+          const inv = involvements?.find(
+            (i) => i.id === boqBidderFilter || i.entity_id === boqBidderFilter,
+          );
+          return inv ? inv.assigned_boqs?.includes(b.id) : false;
+        });
   const salesOrders = allOrders?.items || [];
 
-  // Filter Purchase Orders based on PI (Sales Order) relationship
+  // Filter Purchase Orders: linked via sales order OR directly linked to this lead
   const salesOrderIds = salesOrders.map((so) => so.id);
   const purchaseOrders =
-    allPurchaseOrders?.items?.filter((po) =>
-      salesOrderIds.includes(po.pi_id),
+    allPurchaseOrders?.items?.filter(
+      (po) => po.lead_id === id || salesOrderIds.includes(po.pi_id),
     ) || [];
 
   const orderIds = salesOrders.map((o) => o.id);
@@ -790,7 +820,8 @@ const LeadDetail = () => {
         cancelled: "bg-red-50 text-red-700 ring-red-600/20",
       },
     };
-    const colorClass = variants[type]?.[status] || "bg-gray-50 text-gray-700 ring-gray-600/20";
+    const colorClass =
+      variants[type]?.[status] || "bg-gray-50 text-gray-700 ring-gray-600/20";
     return (
       <Badge className={`${colorClass} ring-1 ring-inset`}>
         {status.replace(/_/g, " ")}
@@ -818,8 +849,10 @@ const LeadDetail = () => {
     );
   }
 
-  const consultants = involvements?.filter((inv) => inv.involvement_type === "consultant") || [];
-  const bidders = involvements?.filter((inv) => inv.involvement_type === "si") || [];
+  const consultants =
+    involvements?.filter((inv) => inv.involvement_type === "consultant") || [];
+  const bidders =
+    involvements?.filter((inv) => inv.involvement_type === "si") || [];
 
   const InfoItem = ({ label, children }) =>
     children ? (
@@ -838,7 +871,11 @@ const LeadDetail = () => {
             <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
             Leads
           </Button>
-          <Button size="sm" variant="outline" onClick={() => navigate(`/leads/edit/${id}`)}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(`/leads/edit/${id}`)}
+          >
             Edit Lead
           </Button>
         </div>
@@ -860,8 +897,16 @@ const LeadDetail = () => {
                   </p>
                 )}
                 <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                  <StateBadge stateName={lead.current_state_name} stateColor={null} />
-                  <Badge variant="outline" className="capitalize text-[10px] h-5">{lead.priority}</Badge>
+                  <StateBadge
+                    stateName={lead.current_state_name}
+                    stateColor={null}
+                  />
+                  <Badge
+                    variant="outline"
+                    className="capitalize text-[10px] h-5"
+                  >
+                    {lead.priority}
+                  </Badge>
                 </div>
               </div>
 
@@ -880,7 +925,9 @@ const LeadDetail = () => {
               <div className="p-4 space-y-2">
                 {lead.expected_value && (
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground">Value</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Value
+                    </span>
                     <span className="text-xs font-semibold text-green-600">
                       ₹{Number(lead.expected_value).toLocaleString("en-IN")}
                     </span>
@@ -888,52 +935,77 @@ const LeadDetail = () => {
                 )}
                 {lead.expected_close_date && (
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground">Close Date</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Close Date
+                    </span>
                     <span className="text-xs font-medium">
-                      {new Date(lead.expected_close_date).toLocaleDateString("en-IN")}
+                      {new Date(lead.expected_close_date).toLocaleDateString(
+                        "en-IN",
+                      )}
                     </span>
                   </div>
                 )}
                 {lead.source && (
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground">Source</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Source
+                    </span>
                     <span className="text-xs font-medium">{lead.source}</span>
                   </div>
                 )}
 
                 {consultants.length > 0 && (
                   <div className="pt-2 mt-1 border-t border-border/30">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Consultant</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                      Consultant
+                    </span>
                     <p className="text-xs font-medium mt-0.5 leading-snug">
-                      {consultants.map((c) => c.entity_name || c.entity_id).join(", ")}
+                      {consultants
+                        .map((c) => c.entity_name || c.entity_id)
+                        .join(", ")}
                     </p>
                   </div>
                 )}
                 {bidders.length > 0 && (
                   <div className="pt-2 mt-1 border-t border-border/30">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Bidders</span>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                      Bidders
+                    </span>
                     <p className="text-xs font-medium mt-0.5 leading-snug">
-                      {bidders.map((b) => b.entity_name || b.entity_id).join(", ")}
+                      {bidders
+                        .map((b) => b.entity_name || b.entity_id)
+                        .join(", ")}
                     </p>
                   </div>
                 )}
                 {lead.notes && (
                   <div className="pt-2 mt-1 border-t border-border/30">
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Notes</span>
-                    <p className="text-xs mt-0.5 leading-relaxed text-foreground/80">{lead.notes}</p>
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                      Notes
+                    </span>
+                    <p className="text-xs mt-0.5 leading-relaxed text-foreground/80">
+                      {lead.notes}
+                    </p>
                   </div>
                 )}
                 {lead.additional_information &&
                   typeof lead.additional_information === "object" &&
                   Object.keys(lead.additional_information).length > 0 && (
                     <div className="pt-2 mt-1 border-t border-border/30 space-y-1">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Additional</span>
-                      {Object.entries(lead.additional_information).map(([key, value]) => (
-                        <div key={key} className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">{key}</span>
-                          <span className="font-medium">{value}</span>
-                        </div>
-                      ))}
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                        Additional
+                      </span>
+                      {Object.entries(lead.additional_information).map(
+                        ([key, value]) => (
+                          <div
+                            key={key}
+                            className="flex justify-between text-xs"
+                          >
+                            <span className="text-muted-foreground">{key}</span>
+                            <span className="font-medium">{value}</span>
+                          </div>
+                        ),
+                      )}
                     </div>
                   )}
               </div>
@@ -942,39 +1014,49 @@ const LeadDetail = () => {
 
           {/* ── RIGHT CONTENT ── */}
           <div>
-            <Tabs defaultValue="timeline" className="w-full" onValueChange={setActiveTab}>
-              <TabsList className="w-full flex overflow-x-auto h-auto p-0.5 gap-0.5 mb-3 bg-muted/50 rounded-lg">
-                <TabsTrigger value="timeline" className="text-[11px] py-1.5 px-2">
+            <Tabs
+              defaultValue="timeline"
+              className="w-full"
+              onValueChange={setActiveTab}
+            >
+              <TabsList className="w-full flex flex-wrap h-auto p-1 gap-2 mb-3 bg-muted/50 rounded-lg">
+                <TabsTrigger value="timeline" className="text-xs py-1.5 px-3">
                   Timeline
                 </TabsTrigger>
-                <TabsTrigger value="boqs" className="text-[11px] py-1.5 px-2">
+                <TabsTrigger value="boqs" className="text-xs py-1.5 px-3">
                   BOQs ({boqs.length})
                 </TabsTrigger>
-                <TabsTrigger value="orders" className="text-[11px] py-1.5 px-2">
+                <TabsTrigger value="orders" className="text-xs py-1.5 px-3">
                   PI ({salesOrders.length})
                 </TabsTrigger>
-                <TabsTrigger value="invoices" className="text-[11px] py-1.5 px-2">
+                <TabsTrigger value="invoices" className="text-xs py-1.5 px-3">
                   PO ({purchaseOrders.length})
                 </TabsTrigger>
-                <TabsTrigger value="payments" className="text-[11px] py-1.5 px-2">
+                <TabsTrigger value="payments" className="text-xs py-1.5 px-3">
                   Payments ({payments.length})
                 </TabsTrigger>
-                <TabsTrigger value="warranties" className="text-[11px] py-1.5 px-2">
+                <TabsTrigger value="warranties" className="text-xs py-1.5 px-3">
                   Warranties ({warranties.length})
                 </TabsTrigger>
-                <TabsTrigger value="involvement" className="text-[11px] py-1.5 px-2">
-                  Inv. ({involvements?.length || 0})
-                </TabsTrigger>
-                <TabsTrigger value="remarks" className="text-[11px] py-1.5 px-2">
+                {(user?.is_superuser ||
+                  user?.permissions?.includes("leads:edit")) && (
+                  <TabsTrigger
+                    value="involvement"
+                    className="text-xs py-1.5 px-3"
+                  >
+                    Inv. ({involvements?.length || 0})
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="remarks" className="text-xs py-1.5 px-3">
                   Remarks ({remarks?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="documents" className="text-[11px] py-1.5 px-2">
+                <TabsTrigger value="documents" className="text-xs py-1.5 px-3">
                   Docs ({documents?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="assign" className="text-[11px] py-1.5 px-2">
+                <TabsTrigger value="assign" className="text-xs py-1.5 px-3">
                   Assign ({assignments?.length || 0})
                 </TabsTrigger>
-                <TabsTrigger value="comments" className="text-[11px] py-1.5 px-2">
+                <TabsTrigger value="comments" className="text-xs py-1.5 px-3">
                   Comments ({comments?.length || 0})
                 </TabsTrigger>
               </TabsList>
@@ -990,18 +1072,25 @@ const LeadDetail = () => {
                 <div className="flex justify-between items-center flex-wrap gap-2">
                   <div className="flex items-center gap-3">
                     <h3 className="text-lg font-semibold">BOQs</h3>
-                    {involvements?.filter((inv) => inv.involvement_type === "si").length > 0 && (
-                      <Select value={boqBidderFilter} onValueChange={setBoqBidderFilter}>
+                    {involvements?.filter(
+                      (inv) => inv.involvement_type === "si",
+                    ).length > 0 && (
+                      <Select
+                        value={boqBidderFilter}
+                        onValueChange={setBoqBidderFilter}
+                      >
                         <SelectTrigger className="w-48 h-8 text-xs">
                           <SelectValue placeholder="Filter by bidder" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Bidders</SelectItem>
-                          {involvements.filter((inv) => inv.involvement_type === "si").map((inv) => (
-                            <SelectItem key={inv.id} value={inv.entity_id}>
-                              {inv.entity_name || inv.entity_id}
-                            </SelectItem>
-                          ))}
+                          {involvements
+                            .filter((inv) => inv.involvement_type === "si")
+                            .map((inv) => (
+                              <SelectItem key={inv.id} value={inv.entity_id}>
+                                {inv.entity_name || inv.entity_id}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     )}
@@ -1226,14 +1315,23 @@ const LeadDetail = () => {
                                 {getStatusBadge(order.status, "order")}
                               </div>
                               <p className="text-sm text-gray-600 mb-1">
-                                For: {order.to_data?.company_name || order.to_data?.name || "—"}
+                                For:{" "}
+                                {order.to_data?.company_name ||
+                                  order.to_data?.name ||
+                                  "—"}
                               </p>
                               {order.boq_id && (
                                 <p className="text-xs text-gray-500 mb-1">
                                   BOQ:{" "}
                                   {(() => {
-                                    const b = boqs.find((b) => b.id === order.boq_id);
-                                    return b ? (b.boq_number || b.name || order.boq_id.slice(-8)) : order.boq_id.slice(-8);
+                                    const b = boqs.find(
+                                      (b) => b.id === order.boq_id,
+                                    );
+                                    return b
+                                      ? b.boq_number ||
+                                          b.name ||
+                                          order.boq_id.slice(-8)
+                                      : order.boq_id.slice(-8);
                                   })()}
                                 </p>
                               )}
@@ -1310,79 +1408,79 @@ const LeadDetail = () => {
               <TabsContent value="invoices" className="space-y-4 mt-4">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Purchase Orders</h3>
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      navigate(`/purchase-orders/new?lead_id=${id}`)
-                    }
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create PO
-                  </Button>
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        try {
+                          const result = await uploadTransitionFile(file);
+                          const poNumber = `PO-${Date.now().toString(36).toUpperCase()}`;
+                          await createPurchaseOrder({
+                            po_number: poNumber,
+                            vendor_id: "client",
+                            lead_id: id,
+                            file_url: result.url,
+                            notes: `Uploaded: ${file.name}`,
+                          });
+                          queryClient.invalidateQueries(["purchaseOrders"]);
+                          toast.success("PO uploaded successfully!");
+                        } catch {
+                          toast.error("Failed to upload PO");
+                        }
+                        e.target.value = "";
+                      }}
+                    />
+                    <Button size="sm" asChild>
+                      <span>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Upload PO
+                      </span>
+                    </Button>
+                  </label>
                 </div>
                 {purchaseOrders.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">
-                    No purchase orders created yet
+                    No purchase orders uploaded yet
                   </p>
                 ) : (
                   purchaseOrders.map((po) => (
                     <Card key={po.id} className="border">
                       <CardContent className="pt-4">
                         <div className="flex justify-between items-start">
-                          <div className="space-y-2">
+                          <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold font-mono">
+                              <span className="font-semibold font-mono text-sm">
                                 {po.po_number}
                               </span>
                               {getStatusBadge(po.status, "purchase_order")}
                             </div>
-                            <p className="text-sm text-gray-600">
-                              Vendor: {po.vendor_name}
-                            </p>
-                            <p className="font-mono font-semibold">
-                              ₹{(po.total_amount ?? 0).toLocaleString()}
-                            </p>
-                            {po.delivery_date && (
-                              <p className="text-sm text-gray-600">
-                                Delivery:{" "}
-                                {format(
-                                  new Date(po.delivery_date),
-                                  "MMM dd, yyyy",
+                            {po.notes && (
+                              <p className="text-xs text-gray-500">
+                                {po.notes}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-400">
+                              {po.created_at &&
+                                new Date(po.created_at).toLocaleDateString(
+                                  "en-IN",
                                 )}
-                              </p>
-                            )}
-                            {po.advance_amount > 0 && (
-                              <p className="text-sm text-gray-600">
-                                Advance: ₹{po.advance_amount.toLocaleString()} |
-                                Pending: ₹{po.pending_amount.toLocaleString()}
-                              </p>
-                            )}
+                            </p>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                navigate(
-                                  `/purchase-orders/${po.id}?lead_id=${id}`,
-                                )
-                              }
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                navigate(
-                                  `/purchase-orders/${po.id}/edit?lead_id=${id}`,
-                                )
-                              }
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
+                          <div className="flex items-center gap-2">
+                            {po.file_url && (
+                              <a
+                                href={po.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary underline text-sm"
+                              >
+                                View File
+                              </a>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -1391,8 +1489,7 @@ const LeadDetail = () => {
                                 handleDeleteConfirmation(po, "purchase_order")
                               }
                             >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Delete
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
@@ -1577,6 +1674,18 @@ const LeadDetail = () => {
                                       {involvement.status}
                                     </Badge>
                                   </div>
+                                  {(involvement.share_percentage != null ||
+                                    involvement.share_amount != null) && (
+                                    <p className="text-xs text-gray-600 mt-1 font-medium">
+                                      {involvement.share_percentage != null &&
+                                        `${involvement.share_percentage}%`}
+                                      {involvement.share_percentage != null &&
+                                        involvement.share_amount != null &&
+                                        " — "}
+                                      {involvement.share_amount != null &&
+                                        `₹${Number(involvement.share_amount).toLocaleString("en-IN")}`}
+                                    </p>
+                                  )}
                                   {involvement.assigned_boqs &&
                                     involvement.assigned_boqs.length > 0 && (
                                       <p className="text-xs text-gray-500 mt-1">
@@ -1673,6 +1782,18 @@ const LeadDetail = () => {
                                       {involvement.status}
                                     </Badge>
                                   </div>
+                                  {(involvement.share_percentage != null ||
+                                    involvement.share_amount != null) && (
+                                    <p className="text-xs text-gray-600 mt-1 font-medium">
+                                      {involvement.share_percentage != null &&
+                                        `${involvement.share_percentage}%`}
+                                      {involvement.share_percentage != null &&
+                                        involvement.share_amount != null &&
+                                        " — "}
+                                      {involvement.share_amount != null &&
+                                        `₹${Number(involvement.share_amount).toLocaleString("en-IN")}`}
+                                    </p>
+                                  )}
                                   {involvement.assigned_boqs &&
                                     involvement.assigned_boqs.length > 0 && (
                                       <p className="text-xs text-gray-500 mt-1">
@@ -1768,6 +1889,18 @@ const LeadDetail = () => {
                                         {involvement.status}
                                       </Badge>
                                     </div>
+                                    {(involvement.share_percentage != null ||
+                                      involvement.share_amount != null) && (
+                                      <p className="text-xs text-gray-600 mt-1 font-medium">
+                                        {involvement.share_percentage != null &&
+                                          `${involvement.share_percentage}%`}
+                                        {involvement.share_percentage != null &&
+                                          involvement.share_amount != null &&
+                                          " — "}
+                                        {involvement.share_amount != null &&
+                                          `₹${Number(involvement.share_amount).toLocaleString("en-IN")}`}
+                                      </p>
+                                    )}
                                     {involvement.assigned_boqs &&
                                       involvement.assigned_boqs.length > 0 && (
                                         <p className="text-xs text-gray-500 mt-1">
@@ -1879,7 +2012,9 @@ const LeadDetail = () => {
                           <Label>Entity *</Label>
                           {selectedEntityObj ? (
                             <div className="flex items-center justify-between border border-gray-200 rounded-md px-3 py-2 bg-blue-50">
-                              <span className="text-sm font-medium truncate">{selectedEntityObj.company_name}</span>
+                              <span className="text-sm font-medium truncate">
+                                {selectedEntityObj.company_name}
+                              </span>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1898,12 +2033,16 @@ const LeadDetail = () => {
                               <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                               <Input
                                 value={entitySearchQuery}
-                                onChange={(e) => setEntitySearchQuery(e.target.value)}
+                                onChange={(e) =>
+                                  setEntitySearchQuery(e.target.value)
+                                }
                                 placeholder={`Search ${involvementType === "si" ? "system integrator" : involvementType}...`}
                                 className="pl-9"
                               />
                               {entitySearching && (
-                                <span className="absolute right-3 top-2.5 text-xs text-gray-400">Searching...</span>
+                                <span className="absolute right-3 top-2.5 text-xs text-gray-400">
+                                  Searching...
+                                </span>
                               )}
                               {entitySearchResults.length > 0 && (
                                 <div className="absolute z-50 w-full border border-gray-200 rounded-md bg-white shadow-md mt-1 max-h-40 overflow-y-auto">
@@ -1920,7 +2059,9 @@ const LeadDetail = () => {
                                       className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between"
                                     >
                                       <span>{e.company_name}</span>
-                                      <span className="text-xs text-gray-400">{e.city}</span>
+                                      <span className="text-xs text-gray-400">
+                                        {e.city}
+                                      </span>
                                     </button>
                                   ))}
                                 </div>
@@ -1948,6 +2089,72 @@ const LeadDetail = () => {
                               <SelectItem value="lose">Lost</SelectItem>
                             </SelectContent>
                           </Select>
+                        </div>
+                      </div>
+
+                      {/* Share / Commission */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Share Percentage (%)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value={sharePercentage}
+                            onChange={(e) => {
+                              const pct = e.target.value;
+                              setSharePercentage(pct);
+                              if (pct !== "" && lead?.expected_value) {
+                                setShareAmount(
+                                  (
+                                    (Number(pct) / 100) *
+                                    Number(lead.expected_value)
+                                  ).toFixed(2),
+                                );
+                              } else {
+                                setShareAmount("");
+                              }
+                            }}
+                            placeholder="e.g. 10"
+                          />
+                        </div>
+                        <div>
+                          <Label>Share Amount (₹)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={shareAmount}
+                            onChange={(e) => {
+                              const amt = e.target.value;
+                              setShareAmount(amt);
+                              if (
+                                amt !== "" &&
+                                lead?.expected_value &&
+                                Number(lead.expected_value) > 0
+                              ) {
+                                setSharePercentage(
+                                  (
+                                    (Number(amt) /
+                                      Number(lead.expected_value)) *
+                                    100
+                                  ).toFixed(2),
+                                );
+                              } else {
+                                setSharePercentage("");
+                              }
+                            }}
+                            placeholder="Auto-calculated from %"
+                          />
+                          {lead?.expected_value && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Project value: ₹
+                              {Number(lead.expected_value).toLocaleString(
+                                "en-IN",
+                              )}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -2003,7 +2210,11 @@ const LeadDetail = () => {
                                       >
                                         {boq.boq_number ||
                                           `BOQ-${boq.id.slice(0, 6)}`}{" "}
-                                        (₹{(boq.total_amount ?? 0).toLocaleString()})
+                                        (₹
+                                        {(
+                                          boq.total_amount ?? 0
+                                        ).toLocaleString()}
+                                        )
                                       </label>
                                     </div>
                                   ))
@@ -2058,7 +2269,11 @@ const LeadDetail = () => {
                                       >
                                         {order.order_number ||
                                           `SO-${order.id.slice(0, 6)}`}{" "}
-                                        (₹{(order.total_amount ?? 0).toLocaleString()})
+                                        (₹
+                                        {(
+                                          order.total_amount ?? 0
+                                        ).toLocaleString()}
+                                        )
                                       </label>
                                     </div>
                                   ))
@@ -2306,14 +2521,25 @@ const LeadDetail = () => {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => { setInvolvementDialogOpen(false); resetInvolvementForm(); }}>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setInvolvementDialogOpen(false);
+                          resetInvolvementForm();
+                        }}
+                      >
                         Cancel
                       </Button>
                       <Button
                         onClick={handleAddInvolvement}
-                        disabled={createInvolvementMutation.isPending || updateInvolvementMutation.isPending}
+                        disabled={
+                          createInvolvementMutation.isPending ||
+                          updateInvolvementMutation.isPending
+                        }
                       >
-                        {editingInvolvement ? "Update Involvement" : "Add Involvement"}
+                        {editingInvolvement
+                          ? "Update Involvement"
+                          : "Add Involvement"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -2362,7 +2588,10 @@ const LeadDetail = () => {
                               <p className="text-xs text-gray-500">
                                 Assigned by {assignment.assigned_by_name} on{" "}
                                 {format(
-                                  new Date(assignment.assigned_at || assignment.created_at),
+                                  new Date(
+                                    assignment.assigned_at ||
+                                      assignment.created_at,
+                                  ),
                                   "MMM dd, yyyy",
                                 )}
                               </p>
@@ -2431,8 +2660,16 @@ const LeadDetail = () => {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
-                      <Button onClick={handleAssignUser} disabled={assignMutation.isPending}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setAssignDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleAssignUser}
+                        disabled={assignMutation.isPending}
+                      >
                         Assign
                       </Button>
                     </DialogFooter>
@@ -2467,9 +2704,7 @@ const LeadDetail = () => {
                                 <span className="font-semibold">
                                   {remark.title}
                                 </span>
-                                <Badge variant="secondary">
-                                  {remark.type}
-                                </Badge>
+                                <Badge variant="secondary">{remark.type}</Badge>
                               </div>
                               {remark.content && (
                                 <p className="text-sm text-gray-600">
@@ -2477,7 +2712,9 @@ const LeadDetail = () => {
                                 </p>
                               )}
                               <p className="text-xs text-gray-500">
-                                By {remark.author_name || remark.created_by_name} on{" "}
+                                By{" "}
+                                {remark.author_name || remark.created_by_name}{" "}
+                                on{" "}
                                 {format(
                                   new Date(remark.created_at),
                                   "MMM dd, yyyy HH:mm",
@@ -2570,10 +2807,18 @@ const LeadDetail = () => {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setRemarkDialogOpen(false)}>Cancel</Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setRemarkDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
                       <Button
                         onClick={handleAddRemark}
-                        disabled={remarkMutation.isPending || updateRemarkMutation.isPending}
+                        disabled={
+                          remarkMutation.isPending ||
+                          updateRemarkMutation.isPending
+                        }
                       >
                         {editingRemark ? "Update Remark" : "Add Remark"}
                       </Button>
@@ -2606,7 +2851,9 @@ const LeadDetail = () => {
                           {/* Avatar Circle */}
                           <div className="relative z-10 flex-shrink-0">
                             <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">
-                              {(comment.author_name || comment.created_by_name)?.charAt(0)?.toUpperCase() ?? "?"}
+                              {(comment.author_name || comment.created_by_name)
+                                ?.charAt(0)
+                                ?.toUpperCase() ?? "?"}
                             </div>
                           </div>
 
@@ -2618,7 +2865,8 @@ const LeadDetail = () => {
                             <div className="flex justify-between items-start mb-2">
                               <div>
                                 <span className="font-semibold text-sm text-gray-900">
-                                  {comment.author_name || comment.created_by_name}
+                                  {comment.author_name ||
+                                    comment.created_by_name}
                                 </span>
                                 <span className="text-xs text-gray-500 ml-2">
                                   {format(
@@ -2710,7 +2958,16 @@ const LeadDetail = () => {
                               <p className="text-xs text-gray-500">
                                 Uploaded by {doc.uploaded_by_name}
                                 {(doc.uploaded_at || doc.created_at) && (
-                                  <> on {format(new Date(doc.uploaded_at || doc.created_at), "MMM dd, yyyy")}</>
+                                  <>
+                                    {" "}
+                                    on{" "}
+                                    {format(
+                                      new Date(
+                                        doc.uploaded_at || doc.created_at,
+                                      ),
+                                      "MMM dd, yyyy",
+                                    )}
+                                  </>
                                 )}
                               </p>
                             </div>
@@ -2742,7 +2999,10 @@ const LeadDetail = () => {
                   open={docDialogOpen}
                   onOpenChange={(open) => {
                     setDocDialogOpen(open);
-                    if (!open) { setDocFile(null); setDocDescription(""); }
+                    if (!open) {
+                      setDocFile(null);
+                      setDocDescription("");
+                    }
                   }}
                 >
                   <DialogContent>
@@ -2770,8 +3030,16 @@ const LeadDetail = () => {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setDocDialogOpen(false)}>Cancel</Button>
-                      <Button onClick={handleUploadDocument} disabled={uploadDocMutation.isPending}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setDocDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleUploadDocument}
+                        disabled={uploadDocMutation.isPending}
+                      >
                         Upload
                       </Button>
                     </DialogFooter>
@@ -2780,7 +3048,8 @@ const LeadDetail = () => {
               </TabsContent>
             </Tabs>
           </div>
-        </div>{/* end 30:70 grid */}
+        </div>
+        {/* end 30:70 grid */}
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
