@@ -74,7 +74,7 @@ const TransitionTimeline = ({ recordType, recordId }) => {
               <div className="mt-1 rounded bg-muted p-2 text-xs space-y-0.5">
                 {Object.entries(log.form_data).map(([key, val]) => {
                   const strVal = Array.isArray(val) ? val.join(", ") : String(val);
-                  const isUrl = strVal.startsWith("http") && (strVal.includes("/uploads/") || strVal.includes("://"));
+                  const isUrl = strVal.includes("/uploads/") || (strVal.startsWith("http") && strVal.includes("://"));
                   return (
                     <div key={key}>
                       <span className="font-medium">{key}:</span>{" "}

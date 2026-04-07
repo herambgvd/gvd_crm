@@ -9,8 +9,8 @@ import {
   deleteLead,
   createLeadInvolvement,
 } from "../api";
-import { searchCustomers, createCustomer } from "../../customers/api";
-import { searchEntities, createEntity } from "../../entities/api";
+import { searchCustomers, createCustomer, fetchCustomer } from "../../customers/api";
+import { searchEntities, createEntity, fetchEntity } from "../../entities/api";
 import { SOPSelector } from "../../workflow-engine";
 import { assignSOP } from "../../workflow-engine/api";
 import { Button } from "../../../components/ui/button";
@@ -317,12 +317,23 @@ function EntityCreateModal({
 }
 
 // ─── Bidder Multi-select ───────────────────────────────────────────────────────
-function BidderSelect({ selectedIds, onChange }) {
+function BidderSelect({ selectedIds, onChange, externalEntities = [] }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   // Store full entity objects so chips display names, not IDs
   const [selectedEntities, setSelectedEntities] = useState([]);
+
+  // Merge externally added entities (e.g. from inline create modal)
+  useEffect(() => {
+    if (externalEntities.length > 0) {
+      setSelectedEntities((prev) => {
+        const existingIds = new Set(prev.map((e) => e.id));
+        const newOnes = externalEntities.filter((e) => !existingIds.has(e.id));
+        return newOnes.length > 0 ? [...prev, ...newOnes] : prev;
+      });
+    }
+  }, [externalEntities]);
 
   const doSearch = useCallback(
     async (q) => {
@@ -442,6 +453,7 @@ const LeadForm = () => {
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
   const [consultantModalOpen, setConsultantModalOpen] = useState(false);
   const [bidderModalOpen, setBidderModalOpen] = useState(false);
+  const [externalBidders, setExternalBidders] = useState([]);
 
   // Autocomplete state
   const [customerQuery, setCustomerQuery] = useState("");
@@ -484,6 +496,27 @@ const LeadForm = () => {
           ([key, value]) => ({ key, value }),
         );
         setAdditionalInfo(info.length > 0 ? info : [{ key: "", value: "" }]);
+      }
+
+      // Populate customer name in search field
+      if (lead.customer_id) {
+        if (lead.customer_name) {
+          setCustomerQuery(lead.customer_name);
+          setSelectedCustomer({ id: lead.customer_id, company_name: lead.customer_name });
+        } else {
+          fetchCustomer(lead.customer_id).then((c) => {
+            setCustomerQuery(c.company_name || "");
+            setSelectedCustomer(c);
+          }).catch(() => {});
+        }
+      }
+
+      // Populate consultant name in search field
+      if (lead.is_consultant_involved && lead.consultant_entity_id) {
+        fetchEntity(lead.consultant_entity_id).then((e) => {
+          setConsultantQuery(e.company_name || "");
+          setSelectedConsultant(e);
+        }).catch(() => {});
       }
     }
   }, [lead]);
@@ -636,6 +669,9 @@ const LeadForm = () => {
     }
 
     const submitData = { ...formData };
+
+    // Remove sop_id during edit — not part of LeadUpdate schema
+    if (isEdit) delete submitData.sop_id;
 
     if (
       submitData.expected_value !== "" &&
@@ -968,6 +1004,7 @@ const LeadForm = () => {
                 </div>
                 <BidderSelect
                   selectedIds={formData.bidder_entity_ids}
+                  externalEntities={externalBidders}
                   onChange={(ids) =>
                     setFormData({ ...formData, bidder_entity_ids: ids })
                   }
@@ -1114,6 +1151,7 @@ const LeadForm = () => {
             ...prev,
             bidder_entity_ids: [...(prev.bidder_entity_ids || []), entity.id],
           }));
+          setExternalBidders((prev) => [...prev, entity]);
           toast.success(`${entity.company_name} added as bidder`);
         }}
       />

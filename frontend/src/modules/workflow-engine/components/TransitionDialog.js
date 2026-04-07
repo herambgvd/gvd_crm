@@ -23,7 +23,7 @@ import {
 import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { executeTransition, uploadTransitionFile } from "../api";
-import { BACKEND_URL } from "../../../lib/axios";
+
 
 const TransitionDialog = ({
   open,
@@ -68,7 +68,7 @@ const TransitionDialog = ({
       if (file instanceof File) {
         try {
           const result = await uploadTransitionFile(file);
-          finalFormData[label] = `${BACKEND_URL}${result.url}`;
+          finalFormData[label] = result.url;
         } catch {
           toast.error(`Failed to upload "${label}"`);
           return;
