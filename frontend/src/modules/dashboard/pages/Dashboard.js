@@ -131,7 +131,6 @@ const Dashboard = () => {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <StatCard label="BOQs" value={sales.boqs || 0} icon={FileText} color="text-orange-600" href="/boqs" navigate={navigate} />
               <StatCard label="Customers" value={sales.customers || 0} icon={Users} color="text-cyan-600" href="/customers" navigate={navigate} />
               <StatCard label="Entities" value={sales.entities || 0} icon={Building} color="text-pink-600" href="/entities" navigate={navigate} />
             </div>
