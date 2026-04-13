@@ -128,8 +128,29 @@ async def test_email(
     data: TestEmailRequest,
     current_user: User = Depends(require_permission("users:edit")),
 ):
-    """Send a test email using current SMTP config."""
-    from apps.common.email_service import send_email
+    """Send a test email using current SMTP config. Returns the exact error if it fails."""
+    import smtplib
+    import ssl
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    import logging
+
+    log = logging.getLogger(__name__)
+    db = get_database()
+    config = await db.config.find_one({}, {"_id": 0})
+
+    if not config:
+        raise HTTPException(status_code=400, detail="SMTP not configured. Save your settings first.")
+
+    missing = []
+    if not config.get("smtp_host"):
+        missing.append("SMTP Host")
+    if not config.get("smtp_username"):
+        missing.append("SMTP Username")
+    if not config.get("smtp_password"):
+        missing.append("SMTP Password")
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Missing required fields: {', '.join(missing)}")
 
     subject = "Stackless — Test Email"
     html_body = f"""
@@ -142,20 +163,44 @@ async def test_email(
     </div>
     """
 
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    from_email = config.get("smtp_from_email") or config.get("smtp_username")
+    from_name = config.get("smtp_from_name", "Stackless CRM")
+    msg["From"] = f"{from_name} <{from_email}>"
+    msg["To"] = data.email
+    msg.attach(MIMEText(html_body, "html"))
+
     try:
-        success = await send_email(data.email, subject, html_body)
-        if not success:
-            raise HTTPException(
-                status_code=400,
-                detail="SMTP not configured or failed to send. Check SMTP Host, Port, Username, and Password.",
-            )
+        smtp_port = int(config.get("smtp_port", 587) or 587)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail=f"Invalid SMTP port: {config.get('smtp_port')}")
+
+    try:
+        if config.get("smtp_use_ssl"):
+            context = ssl.create_default_context()
+            server = smtplib.SMTP_SSL(config["smtp_host"], smtp_port, context=context, timeout=15)
+        else:
+            server = smtplib.SMTP(config["smtp_host"], smtp_port, timeout=15)
+            if config.get("smtp_use_tls"):
+                server.starttls(context=ssl.create_default_context())
+
+        server.login(config["smtp_username"], config["smtp_password"])
+        server.sendmail(from_email, data.email, msg.as_string())
+        server.quit()
+        log.info(f"Test email sent to {data.email}")
         return {"message": f"Test email sent to {data.email}"}
-    except HTTPException:
-        raise
+
+    except smtplib.SMTPAuthenticationError as e:
+        raise HTTPException(status_code=400, detail=f"Authentication failed. Check username/password. ({e.smtp_code}: {e.smtp_error.decode() if isinstance(e.smtp_error, bytes) else e.smtp_error})")
+    except smtplib.SMTPConnectError as e:
+        raise HTTPException(status_code=400, detail=f"Cannot connect to {config['smtp_host']}:{smtp_port} — {e}")
+    except smtplib.SMTPServerDisconnected as e:
+        raise HTTPException(status_code=400, detail=f"Server disconnected: {e}. Try toggling TLS/SSL.")
+    except smtplib.SMTPException as e:
+        raise HTTPException(status_code=400, detail=f"SMTP error: {e}")
+    except OSError as e:
+        raise HTTPException(status_code=400, detail=f"Network error: {e}. Check host and port.")
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).exception("Test email failed")
-        raise HTTPException(
-            status_code=400,
-            detail=f"Failed to send test email: {str(e)[:200]}",
-        )
+        log.exception("Test email failed")
+        raise HTTPException(status_code=400, detail=f"Failed: {str(e)[:200]}")
