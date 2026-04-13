@@ -55,7 +55,7 @@ export const fetchLeadAssignments = async (leadId) => {
 };
 
 export const createAssignment = async (data) => {
-  const response = await axios.post(`${API}/assignments/`, data, {
+  const response = await axios.post(`${API}/assignments`, data, {
     headers: getAuthHeader(),
   });
   return response.data;
@@ -78,7 +78,7 @@ export const fetchLeadRemarks = async (leadId) => {
 };
 
 export const createRemark = async (data) => {
-  const response = await axios.post(`${API}/remarks/`, data, {
+  const response = await axios.post(`${API}/remarks`, data, {
     headers: getAuthHeader(),
   });
   return response.data;
@@ -108,7 +108,7 @@ export const fetchLeadComments = async (leadId) => {
 };
 
 export const createComment = async (data) => {
-  const response = await axios.post(`${API}/comments/`, data, {
+  const response = await axios.post(`${API}/comments`, data, {
     headers: getAuthHeader(),
   });
   return response.data;
@@ -144,7 +144,7 @@ export const uploadLeadDocument = async (file, leadId, description) => {
   formData.append("lead_id", leadId);
   if (description) formData.append("description", description);
 
-  const response = await axios.post(`${API}/lead-documents/`, formData, {
+  const response = await axios.post(`${API}/lead-documents`, formData, {
     headers: {
       ...getAuthHeader(),
       "Content-Type": "multipart/form-data",
