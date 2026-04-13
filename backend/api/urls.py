@@ -10,6 +10,7 @@ from apps.business.workflow.views import router as workflow_router
 from apps.business.inventory.views import router as inventory_router
 from apps.business.warehouse.views import router as warehouse_router
 from apps.workflow_engine.views import router as workflow_engine_router
+from apps.tasks.views import router as tasks_router
 from apps.import_engine.views import router as import_engine_router
 from apps.support.views import router as support_router
 from apps.support.ticket_views import router as ticket_lifecycle_router
@@ -164,6 +165,9 @@ api_router.include_router(warehouse_router, prefix="/warehouses", tags=["Warehou
 
 # Workflow Engine (SOP Builder)
 api_router.include_router(workflow_engine_router, prefix="/workflow-engine", tags=["Workflow Engine"])
+
+# Tasks (Todo)
+api_router.include_router(tasks_router, prefix="/tasks", tags=["Tasks"])
 
 # Import Engine
 api_router.include_router(import_engine_router, prefix="/import", tags=["Import Engine"])

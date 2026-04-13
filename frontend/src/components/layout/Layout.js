@@ -310,6 +310,29 @@ const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
                 {!sidebarCollapsed && "Dashboard"}
               </Link>
 
+              {/* Tasks - Single Item */}
+              <Link
+                to="/tasks"
+                className={`${
+                  isActive("/tasks")
+                    ? "bg-primary text-primary-foreground"
+                    : "text-gray-700 hover:bg-gray-100"
+                } group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors`}
+                data-testid="nav-tasks"
+              >
+                <CheckSquare
+                  className={`${
+                    isActive("/tasks")
+                      ? "text-primary-foreground"
+                      : "text-gray-500"
+                  } ${
+                    sidebarCollapsed ? "mx-auto" : "mr-3"
+                  } flex-shrink-0 h-5 w-5`}
+                  aria-hidden="true"
+                />
+                {!sidebarCollapsed && "Tasks"}
+              </Link>
+
               {/* Sales Section */}
               <div className="mt-2">
                 <button
@@ -792,6 +815,27 @@ const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
                       aria-hidden="true"
                     />
                     Dashboard
+                  </Link>
+
+                  {/* Tasks - Mobile */}
+                  <Link
+                    to="/tasks"
+                    className={`${
+                      isActive("/tasks")
+                        ? "bg-primary text-primary-foreground"
+                        : "text-gray-700 hover:bg-gray-100"
+                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-md`}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <CheckSquare
+                      className={`${
+                        isActive("/tasks")
+                          ? "text-primary-foreground"
+                          : "text-gray-500"
+                      } mr-3 flex-shrink-0 h-5 w-5`}
+                      aria-hidden="true"
+                    />
+                    Tasks
                   </Link>
 
                   {/* Sales Section - Mobile */}

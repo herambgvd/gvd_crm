@@ -232,6 +232,15 @@ class DatabaseManager:
             await self.database.grn_records.create_index("in_transit_id")
             await self.database.grn_records.create_index([("created_at", -1)])
             
+            # Tasks indexes
+            await self.database.tasks.create_index("created_by")
+            await self.database.tasks.create_index("collaborators")
+            await self.database.tasks.create_index([("due_date", 1)])
+            await self.database.tasks.create_index("status")
+            await self.database.tasks.create_index([("created_at", -1)])
+            await self.database.task_comments.create_index("task_id")
+            await self.database.task_comments.create_index([("created_at", 1)])
+
             # Workflow engine indexes on existing collections
             await self.database.leads.create_index("sop_id")
             await self.database.leads.create_index("current_state_id")

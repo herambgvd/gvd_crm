@@ -12,6 +12,7 @@ import ErrorBoundary from "./components/common/ErrorBoundary";
 // Module imports — each module barrel exports its pages
 import { Login, ForgotPassword, ResetPassword } from "./modules/auth";
 import { Dashboard } from "./modules/dashboard";
+import { Tasks, TaskCalendar, TaskForm, TaskDetail } from "./modules/tasks";
 import { Leads, LeadForm, LeadDetail } from "./modules/leads";
 import { Entities, EntityForm, EntityDetail } from "./modules/entities";
 import { Customers, CustomerForm } from "./modules/customers";
@@ -157,6 +158,13 @@ function App() {
                 </P>
               }
             />
+
+            {/* Tasks */}
+            <Route path="/tasks" element={<P><Tasks /></P>} />
+            <Route path="/tasks/calendar" element={<P><TaskCalendar /></P>} />
+            <Route path="/tasks/new" element={<P><TaskForm /></P>} />
+            <Route path="/tasks/edit/:id" element={<P><TaskForm /></P>} />
+            <Route path="/tasks/:id" element={<P><TaskDetail /></P>} />
 
             {/* Leads */}
             <Route
