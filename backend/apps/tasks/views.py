@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from apps.authentication.models import User
 from core.auth import get_current_user
 from core.file_utils import safe_filename, validate_upload
+from core.notifications import notify_users, create_notification
 
 from .schemas import (
     TaskCommentCreate,
@@ -36,6 +37,18 @@ async def create_task(
 ):
     payload = data.model_dump()
     doc = await task_service.create(payload, user_id=current_user.id)
+
+    # Notify collaborators
+    user_name = f"{current_user.first_name} {current_user.last_name}".strip() or current_user.email
+    await notify_users(
+        user_ids=doc.get("collaborators", []),
+        title="Added to a task",
+        message=f"{user_name} added you to '{doc.get('title', 'a task')}'",
+        link=f"/tasks/{doc['id']}",
+        notification_type="info",
+        exclude_user_id=current_user.id,
+    )
+
     enriched = await task_service.enrich_users([doc])
     return TaskResponse(**enriched[0])
 
@@ -112,10 +125,27 @@ async def update_task(
     if not await task_service.can_access(task_id, current_user.id, current_user.is_superuser):
         raise HTTPException(status_code=404, detail="Task not found")
 
+    # Track newly added collaborators for notification
+    before = await task_service.get_by_id(task_id)
+    old_collaborators = set(before.get("collaborators", []) if before else [])
+
     update_data = data.model_dump(exclude_unset=True)
     doc = await task_service.update(task_id, update_data, user_id=current_user.id)
     if not doc:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    # Notify newly-added collaborators
+    new_collaborators = set(doc.get("collaborators", [])) - old_collaborators
+    if new_collaborators:
+        user_name = f"{current_user.first_name} {current_user.last_name}".strip() or current_user.email
+        await notify_users(
+            user_ids=list(new_collaborators),
+            title="Added to a task",
+            message=f"{user_name} added you to '{doc.get('title', 'a task')}'",
+            link=f"/tasks/{doc['id']}",
+            notification_type="info",
+            exclude_user_id=current_user.id,
+        )
 
     enriched = await task_service.enrich_users([doc])
     return TaskResponse(**enriched[0])
@@ -168,6 +198,22 @@ async def create_comment(
         },
         user_id=current_user.id,
     )
+
+    # Notify creator + collaborators about the new comment
+    task = await task_service.get_by_id(task_id)
+    if task:
+        targets = set(task.get("collaborators", []))
+        if task.get("created_by"):
+            targets.add(task["created_by"])
+        await notify_users(
+            user_ids=list(targets),
+            title="New comment on task",
+            message=f"{user_name or current_user.email} commented on '{task.get('title', 'a task')}'",
+            link=f"/tasks/{task_id}",
+            notification_type="comment",
+            exclude_user_id=current_user.id,
+        )
+
     return TaskCommentResponse(**doc)
 
 
