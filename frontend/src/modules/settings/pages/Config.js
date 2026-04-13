@@ -20,11 +20,13 @@ import {
 import { Switch } from "../../../components/ui/switch";
 import { Settings, Building2, Mail, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { fetchConfig, updateConfig } from "../api";
+import { fetchConfig, updateConfig, sendTestEmail } from "../api";
 
 const Config = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("platform");
+  const [testEmailAddress, setTestEmailAddress] = useState("");
+  const [testingEmail, setTestingEmail] = useState(false);
 
   // Platform settings
   const [platformSettings, setPlatformSettings] = useState({
@@ -376,12 +378,30 @@ const Config = () => {
               <CardContent>
                 <div className="flex items-center gap-4">
                   <Input
+                    type="email"
                     placeholder="Enter test email address"
                     className="max-w-sm"
+                    value={testEmailAddress}
+                    onChange={(e) => setTestEmailAddress(e.target.value)}
                   />
-                  <Button variant="outline">
+                  <Button
+                    variant="outline"
+                    disabled={testingEmail || !testEmailAddress.trim()}
+                    onClick={async () => {
+                      setTestingEmail(true);
+                      try {
+                        await sendTestEmail(testEmailAddress.trim());
+                        toast.success(`Test email sent to ${testEmailAddress}`);
+                        setTestEmailAddress("");
+                      } catch (err) {
+                        toast.error(err.response?.data?.detail || "Failed to send test email");
+                      } finally {
+                        setTestingEmail(false);
+                      }
+                    }}
+                  >
                     <Mail className="mr-2 h-4 w-4" />
-                    Send Test Email
+                    {testingEmail ? "Sending..." : "Send Test Email"}
                   </Button>
                 </div>
               </CardContent>

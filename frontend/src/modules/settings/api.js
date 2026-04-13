@@ -374,3 +374,12 @@ export const updateConfig = async (data) => {
   });
   return response.data;
 };
+
+export const sendTestEmail = async (email) => {
+  const response = await axios.post(
+    `${BACKEND_URL}/api/v1/config/test-email`,
+    { email },
+    { headers: { ...getAuthHeader(), "Content-Type": "application/json" } }
+  );
+  return response.data;
+};

@@ -117,3 +117,45 @@ async def update_config(
     # Fetch and return updated config
     config = await db.config.find_one({}, {"_id": 0})
     return ConfigResponse(**config)
+
+
+class TestEmailRequest(BaseModel):
+    email: str
+
+
+@router.post("/test-email")
+async def test_email(
+    data: TestEmailRequest,
+    current_user: User = Depends(require_permission("users:edit")),
+):
+    """Send a test email using current SMTP config."""
+    from apps.common.email_service import send_email
+
+    subject = "Stackless — Test Email"
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #0f172a;">SMTP Configuration Test</h2>
+        <p>This is a test email from your Stackless CRM to verify SMTP settings.</p>
+        <p>If you are seeing this, your email configuration is working correctly.</p>
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+        <p style="color: #6b7280; font-size: 12px;">Sent at {datetime.now(timezone.utc).isoformat()}</p>
+    </div>
+    """
+
+    try:
+        success = await send_email(data.email, subject, html_body)
+        if not success:
+            raise HTTPException(
+                status_code=400,
+                detail="SMTP not configured or failed to send. Check SMTP Host, Port, Username, and Password.",
+            )
+        return {"message": f"Test email sent to {data.email}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).exception("Test email failed")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to send test email: {str(e)[:200]}",
+        )
