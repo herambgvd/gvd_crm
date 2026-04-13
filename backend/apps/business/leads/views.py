@@ -138,11 +138,104 @@ async def delete_lead(
     lead_id: str,
     current_user: User = Depends(require_permission("leads:delete")),
 ):
-    """Permanently delete a lead."""
-    success = await lead_service.hard_delete(lead_id)
-    if not success:
+    """Delete a lead and cascade-delete all related records (BOQs, POs, PIs, invoices, payments, etc.)."""
+    from core.database import get_database
+    from datetime import datetime, timezone
+
+    lead = await lead_service.get_by_id(lead_id)
+    if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-    return {"message": "Lead deleted successfully"}
+
+    db = get_database()
+    now = datetime.now(timezone.utc).isoformat()
+    soft_delete_set = {
+        "is_deleted": True,
+        "deleted_at": now,
+        "deleted_by": current_user.id,
+        "updated_at": now,
+    }
+
+    # Collect related BOQs and Sales Orders first (needed to cascade their children)
+    boqs = await db.boqs.find(
+        {"lead_id": lead_id, "is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1},
+    ).to_list(1000)
+    boq_ids = [b["id"] for b in boqs]
+
+    sales_orders = await db.sales_orders.find(
+        {"lead_id": lead_id, "is_deleted": {"$ne": True}},
+        {"_id": 0, "id": 1},
+    ).to_list(1000)
+    so_ids = [s["id"] for s in sales_orders]
+
+    cascade_counts = {}
+
+    async def soft_delete_where(collection_name: str, query: dict) -> int:
+        result = await db[collection_name].update_many(
+            {**query, "is_deleted": {"$ne": True}},
+            {"$set": soft_delete_set},
+        )
+        return result.modified_count
+
+    # 1. Purchase orders linked to sales orders
+    if so_ids:
+        cascade_counts["purchase_orders"] = await soft_delete_where(
+            "purchase_orders", {"sales_order_id": {"$in": so_ids}}
+        )
+        cascade_counts["invoices"] = await soft_delete_where(
+            "invoices", {"sales_order_id": {"$in": so_ids}}
+        )
+        cascade_counts["warranties"] = await soft_delete_where(
+            "warranties", {"sales_order_id": {"$in": so_ids}}
+        )
+
+    # 2. Payments linked to invoices of those sales orders
+    if so_ids:
+        invoices_for_sos = await db.invoices.find(
+            {"sales_order_id": {"$in": so_ids}},
+            {"_id": 0, "id": 1},
+        ).to_list(2000)
+        invoice_ids = [i["id"] for i in invoices_for_sos]
+        if invoice_ids:
+            cascade_counts["payments"] = await soft_delete_where(
+                "payments", {"invoice_id": {"$in": invoice_ids}}
+            )
+
+    # 3. Sales orders themselves
+    cascade_counts["sales_orders"] = await soft_delete_where(
+        "sales_orders", {"lead_id": lead_id}
+    )
+
+    # 4. BOQs
+    cascade_counts["boqs"] = await soft_delete_where("boqs", {"lead_id": lead_id})
+
+    # 5. Lead-scoped children
+    cascade_counts["lead_involvements"] = await soft_delete_where(
+        "lead_involvements", {"lead_id": lead_id}
+    )
+    cascade_counts["lead_documents"] = await soft_delete_where(
+        "lead_documents", {"lead_id": lead_id}
+    )
+    cascade_counts["assignments"] = await soft_delete_where(
+        "assignments", {"lead_id": lead_id}
+    )
+    cascade_counts["remarks"] = await soft_delete_where(
+        "remarks", {"entity_type": "lead", "entity_id": lead_id}
+    )
+    cascade_counts["comments"] = await soft_delete_where(
+        "comments", {"entity_type": "lead", "entity_id": lead_id}
+    )
+    cascade_counts["transition_logs"] = await soft_delete_where(
+        "transition_logs", {"record_type": "lead", "record_id": lead_id}
+    )
+
+    # 6. Finally the lead itself
+    await lead_service.soft_delete(lead_id, user_id=current_user.id)
+
+    return {
+        "message": "Lead and all related records deleted",
+        "cascade": {k: v for k, v in cascade_counts.items() if v > 0},
+    }
 
 
 @router.post("/admin/migrate-legacy-fields")
