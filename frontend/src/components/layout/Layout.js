@@ -26,6 +26,7 @@ import {
   BarChart3,
   GitBranch,
   Bell,
+  Clock,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import {
@@ -331,6 +332,29 @@ const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
                   aria-hidden="true"
                 />
                 {!sidebarCollapsed && "Tasks"}
+              </Link>
+
+              {/* Attendance - Single Item */}
+              <Link
+                to="/attendance"
+                className={`${
+                  isActive("/attendance")
+                    ? "bg-primary text-primary-foreground"
+                    : "text-gray-700 hover:bg-gray-100"
+                } group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors`}
+                data-testid="nav-attendance"
+              >
+                <Clock
+                  className={`${
+                    isActive("/attendance")
+                      ? "text-primary-foreground"
+                      : "text-gray-500"
+                  } ${
+                    sidebarCollapsed ? "mx-auto" : "mr-3"
+                  } flex-shrink-0 h-5 w-5`}
+                  aria-hidden="true"
+                />
+                {!sidebarCollapsed && "Attendance"}
               </Link>
 
               {/* Sales Section */}
@@ -836,6 +860,27 @@ const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
                       aria-hidden="true"
                     />
                     Tasks
+                  </Link>
+
+                  {/* Attendance - Mobile */}
+                  <Link
+                    to="/attendance"
+                    className={`${
+                      isActive("/attendance")
+                        ? "bg-primary text-primary-foreground"
+                        : "text-gray-700 hover:bg-gray-100"
+                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-md`}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <Clock
+                      className={`${
+                        isActive("/attendance")
+                          ? "text-primary-foreground"
+                          : "text-gray-500"
+                      } mr-3 flex-shrink-0 h-5 w-5`}
+                      aria-hidden="true"
+                    />
+                    Attendance
                   </Link>
 
                   {/* Sales Section - Mobile */}

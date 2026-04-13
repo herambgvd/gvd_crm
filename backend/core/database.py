@@ -232,6 +232,11 @@ class DatabaseManager:
             await self.database.grn_records.create_index("in_transit_id")
             await self.database.grn_records.create_index([("created_at", -1)])
             
+            # Attendance indexes
+            await self.database.attendance.create_index([("user_id", 1), ("date", -1)])
+            await self.database.attendance.create_index("date")
+            await self.database.attendance.create_index("user_id")
+
             # Tasks indexes
             await self.database.tasks.create_index("created_by")
             await self.database.tasks.create_index("collaborators")

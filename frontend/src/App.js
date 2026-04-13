@@ -13,6 +13,7 @@ import ErrorBoundary from "./components/common/ErrorBoundary";
 import { Login, ForgotPassword, ResetPassword } from "./modules/auth";
 import { Dashboard } from "./modules/dashboard";
 import { Tasks, TaskCalendar, TaskForm, TaskDetail } from "./modules/tasks";
+import { Attendance, AttendanceTeam, AttendanceAdmin } from "./modules/attendance";
 import { Leads, LeadForm, LeadDetail } from "./modules/leads";
 import { Entities, EntityForm, EntityDetail } from "./modules/entities";
 import { Customers, CustomerForm } from "./modules/customers";
@@ -165,6 +166,11 @@ function App() {
             <Route path="/tasks/new" element={<P><TaskForm /></P>} />
             <Route path="/tasks/edit/:id" element={<P><TaskForm /></P>} />
             <Route path="/tasks/:id" element={<P><TaskDetail /></P>} />
+
+            {/* Attendance */}
+            <Route path="/attendance" element={<P><Attendance /></P>} />
+            <Route path="/attendance/team" element={<P><AttendanceTeam /></P>} />
+            <Route path="/attendance/admin" element={<P><AttendanceAdmin /></P>} />
 
             {/* Leads */}
             <Route
