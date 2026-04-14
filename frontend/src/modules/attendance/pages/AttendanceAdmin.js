@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "../../../components";
-import { fetchAllAttendance, exportAttendance, updateAttendanceRecord } from "../api";
+import { fetchAllAttendance, exportAttendance, updateAttendanceRecord, deleteAttendanceRecord } from "../api";
 import { fetchUsers } from "../../settings/api";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../../components/ui/dialog";
-import { ArrowLeft, Download, MapPin, Edit } from "lucide-react";
+import { ArrowLeft, Download, MapPin, Edit, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 // Convert UTC ISO string to local datetime-local input format
@@ -68,6 +68,17 @@ const AttendanceAdmin = () => {
       setEditing(null);
     },
     onError: (err) => toast.error(err.response?.data?.detail || "Failed to update"),
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: (id) => deleteAttendanceRecord(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance-all"] });
+      queryClient.invalidateQueries({ queryKey: ["attendance-today"] });
+      toast.success("Record reset. User can punch in again.");
+      setEditing(null);
+    },
+    onError: (err) => toast.error(err.response?.data?.detail || "Failed to reset"),
   });
 
   const handleSaveEdit = () => {
@@ -240,11 +251,26 @@ const AttendanceAdmin = () => {
                 </p>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>Cancel</Button>
-              <Button size="sm" onClick={handleSaveEdit} disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? "Saving..." : "Save"}
+            <DialogFooter className="flex-row sm:justify-between">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (window.confirm("Reset this record? The user will be able to punch in again for this day.")) {
+                    resetMutation.mutate(editing.id);
+                  }
+                }}
+                disabled={resetMutation.isPending}
+              >
+                <RotateCcw className="h-3 w-3 mr-1" />
+                {resetMutation.isPending ? "Resetting..." : "Reset"}
               </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditing(null)}>Cancel</Button>
+                <Button size="sm" onClick={handleSaveEdit} disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? "Saving..." : "Save"}
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>

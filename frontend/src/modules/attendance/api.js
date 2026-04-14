@@ -56,3 +56,8 @@ export const updateAttendanceRecord = async (id, data) => {
   const { data: result } = await axios.put(`${BASE}/${id}`, data, { headers: getAuthHeader() });
   return result;
 };
+
+export const deleteAttendanceRecord = async (id) => {
+  const { data } = await axios.delete(`${BASE}/${id}`, { headers: getAuthHeader() });
+  return data;
+};

@@ -225,6 +225,23 @@ async def export_csv(
 
 # ── Admin update ──────────────────────────────────────────────────────
 
+@router.delete("/{record_id}")
+async def admin_delete_record(
+    record_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    """Admin — reset/delete an attendance record. User can punch in again after this."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    existing = await attendance_service.get_by_id(record_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+    await attendance_service.soft_delete(record_id, user_id=current_user.id)
+    return {"message": "Attendance record reset. User can punch in again."}
+
+
 @router.put("/{record_id}", response_model=AttendanceResponse)
 async def admin_update_record(
     record_id: str,
