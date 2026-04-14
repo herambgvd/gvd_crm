@@ -15,11 +15,19 @@ import { Card, CardContent } from "../../../components/ui/card";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../../../components/ui/alert-dialog";
+import {
   LogIn,
   LogOut,
   Clock,
-  Calendar,
-  MapPin,
   Users,
   Shield,
   Download,
@@ -50,6 +58,7 @@ const Attendance = () => {
   const [now, setNow] = useState(new Date());
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [confirmPunchOut, setConfirmPunchOut] = useState(false);
 
   // Live clock
   useEffect(() => {
@@ -172,7 +181,7 @@ const Attendance = () => {
                     <Button
                       size="lg"
                       className="bg-red-600 hover:bg-red-700 text-white"
-                      onClick={() => punchOutMutation.mutate()}
+                      onClick={() => setConfirmPunchOut(true)}
                       disabled={punchOutMutation.isPending}
                     >
                       <LogOut className="mr-2 h-4 w-4" />
@@ -256,6 +265,32 @@ const Attendance = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Punch out confirmation */}
+        <AlertDialog open={confirmPunchOut} onOpenChange={setConfirmPunchOut}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Punch Out</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to punch out? You worked{" "}
+                <strong className="text-foreground">{hours}h {minutes}m</strong> today.
+                You can only punch in once per day.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-600 hover:bg-red-700"
+                onClick={() => {
+                  setConfirmPunchOut(false);
+                  punchOutMutation.mutate();
+                }}
+              >
+                Yes, Punch Out
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

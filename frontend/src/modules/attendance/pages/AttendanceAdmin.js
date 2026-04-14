@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "../../../components";
-import { fetchAllAttendance, exportAttendance } from "../api";
+import { fetchAllAttendance, exportAttendance, updateAttendanceRecord } from "../api";
 import { fetchUsers } from "../../settings/api";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
@@ -15,16 +15,68 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../../components/ui/select";
-import { ArrowLeft, Download, MapPin } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../../components/ui/dialog";
+import { ArrowLeft, Download, MapPin, Edit } from "lucide-react";
+import { toast } from "sonner";
+
+// Convert UTC ISO string to local datetime-local input format
+const isoToLocalInput = (iso) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+// Convert datetime-local input to ISO string
+const localInputToIso = (local) => {
+  if (!local) return null;
+  return new Date(local).toISOString();
+};
 
 const formatTime = (dt) => (dt ? new Date(dt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "—");
 const formatDate = (s) => (s ? new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—");
 
 const AttendanceAdmin = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [userFilter, setUserFilter] = useState("all");
+  const [editing, setEditing] = useState(null); // record being edited
+  const [editForm, setEditForm] = useState({ punch_in_at: "", punch_out_at: "" });
+
+  useEffect(() => {
+    if (editing) {
+      setEditForm({
+        punch_in_at: isoToLocalInput(editing.punch_in_at),
+        punch_out_at: isoToLocalInput(editing.punch_out_at),
+      });
+    }
+  }, [editing]);
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => updateAttendanceRecord(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance-all"] });
+      toast.success("Record updated");
+      setEditing(null);
+    },
+    onError: (err) => toast.error(err.response?.data?.detail || "Failed to update"),
+  });
+
+  const handleSaveEdit = () => {
+    if (!editing) return;
+    const payload = {};
+    if (editForm.punch_in_at) payload.punch_in_at = localInputToIso(editForm.punch_in_at);
+    if (editForm.punch_out_at) payload.punch_out_at = localInputToIso(editForm.punch_out_at);
+    updateMutation.mutate({ id: editing.id, data: payload });
+  };
 
   const { data: users = [] } = useQuery({
     queryKey: ["users"],
@@ -115,6 +167,7 @@ const AttendanceAdmin = () => {
                       <th className="py-2 font-medium text-muted-foreground">Punch Out</th>
                       <th className="py-2 font-medium text-muted-foreground">Location</th>
                       <th className="py-2 font-medium text-muted-foreground text-right">Hours</th>
+                      <th className="py-2"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -138,6 +191,11 @@ const AttendanceAdmin = () => {
                           <td className="py-2 text-right tabular-nums font-medium">
                             {r.total_hours ? `${r.total_hours.toFixed(2)}h` : "—"}
                           </td>
+                          <td className="py-2 text-right">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditing(r)}>
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          </td>
                         </tr>
                       );
                     })}
@@ -147,6 +205,49 @@ const AttendanceAdmin = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Edit dialog */}
+        <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-base">Edit Attendance Record</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              {editing && (
+                <div className="text-xs text-muted-foreground">
+                  <p><strong className="text-foreground">{editing.user_name}</strong> — {formatDate(editing.date)}</p>
+                </div>
+              )}
+              <div>
+                <Label className="text-xs">Punch In</Label>
+                <Input
+                  type="datetime-local"
+                  className="h-9 text-sm"
+                  value={editForm.punch_in_at}
+                  onChange={(e) => setEditForm({ ...editForm, punch_in_at: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Punch Out</Label>
+                <Input
+                  type="datetime-local"
+                  className="h-9 text-sm"
+                  value={editForm.punch_out_at}
+                  onChange={(e) => setEditForm({ ...editForm, punch_out_at: e.target.value })}
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Leave empty to clear punch out (record stays open).
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setEditing(null)}>Cancel</Button>
+              <Button size="sm" onClick={handleSaveEdit} disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? "Saving..." : "Save"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );

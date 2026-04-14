@@ -35,6 +35,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
 } from "../../lib/notificationsApi";
+import QuickPunch from "../../modules/attendance/components/QuickPunch";
 
 const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
   const { user, logout } = useAuth();
@@ -1287,7 +1288,7 @@ const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
       {/* Main content */}
       <div className={sidebarCollapsed ? "md:pl-16" : "md:pl-64"}>
         {/* Top bar — hamburger (mobile) + notification bell (all) */}
-        <div className="sticky top-0 z-20 flex items-center justify-between md:justify-end pl-1 pt-1 pr-4 sm:pl-3 sm:pt-3 pb-1 bg-[#FAFAFA] border-b border-gray-100">
+        <div className="sticky top-0 z-20 flex items-center justify-between pl-1 pt-1 pr-4 sm:pl-3 sm:pt-3 pb-1 bg-[#FAFAFA] border-b border-gray-100">
           <button
             type="button"
             className="md:hidden -ml-0.5 -mt-0.5 h-12 w-12 inline-flex items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none"
@@ -1296,6 +1297,10 @@ const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
             <span className="sr-only">Open sidebar</span>
             <Menu className="h-6 w-6" aria-hidden="true" />
           </button>
+
+          <div className="ml-auto flex items-center gap-2">
+          {/* Quick Punch In/Out */}
+          <QuickPunch />
 
           {/* Notification Bell */}
           <div className="relative" ref={notifRef}>
@@ -1355,6 +1360,7 @@ const Layout = ({ children, sidebarCollapsed: defaultCollapsed = false }) => {
                 </div>
               </div>
             )}
+          </div>
           </div>
         </div>
 
