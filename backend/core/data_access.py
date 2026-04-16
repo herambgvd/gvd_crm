@@ -36,9 +36,15 @@ async def get_user_team_context(user_id: str) -> Dict[str, Any]:
 
     db = get_database()
 
-    # Find teams where user is leader
+    # Find teams where user is leader (supports both leader_id and leader_ids)
     led_teams = await db.teams.find(
-        {"leader_id": user_id, "is_deleted": {"$ne": True}},
+        {
+            "$or": [
+                {"leader_id": user_id},
+                {"leader_ids": user_id},
+            ],
+            "is_deleted": {"$ne": True},
+        },
         {"_id": 0, "id": 1, "member_ids": 1}
     ).to_list(20)
 

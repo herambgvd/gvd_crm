@@ -18,16 +18,28 @@ router = APIRouter(prefix="/teams", tags=["teams"])
 
 
 async def _enrich_team(team: dict, db) -> dict:
-    """Add leader_name and members list to a team document."""
-    if team.get("leader_id"):
-        leader = await db.users.find_one(
-            {"id": team["leader_id"]},
-            {"_id": 0, "first_name": 1, "last_name": 1},
-        )
-        team["leader_name"] = (
-            f"{leader['first_name']} {leader['last_name']}" if leader else None
-        )
+    """Add leader_names, leader_name, and members list to a team document."""
+    # Normalize leader_ids (support both old leader_id and new leader_ids)
+    leader_ids = team.get("leader_ids", [])
+    if not leader_ids and team.get("leader_id"):
+        leader_ids = [team["leader_id"]]
+    team["leader_ids"] = leader_ids
 
+    # Legacy compat
+    team["leader_id"] = leader_ids[0] if leader_ids else None
+
+    # Fetch leader names
+    leader_names = []
+    if leader_ids:
+        leaders = await db.users.find(
+            {"id": {"$in": leader_ids}},
+            {"_id": 0, "id": 1, "first_name": 1, "last_name": 1},
+        ).to_list(len(leader_ids))
+        leader_names = [f"{l['first_name']} {l['last_name']}" for l in leaders]
+    team["leader_names"] = leader_names
+    team["leader_name"] = leader_names[0] if leader_names else None
+
+    # Members
     member_ids = team.get("member_ids", [])
     members = []
     if member_ids:
@@ -109,9 +121,16 @@ async def create_team(
     if existing:
         raise HTTPException(status_code=400, detail="Team name already exists")
 
+    payload = data.model_dump()
+    # Normalize: ensure leader_ids is populated
+    if not payload.get("leader_ids") and payload.get("leader_id"):
+        payload["leader_ids"] = [payload["leader_id"]]
+    elif payload.get("leader_ids"):
+        payload["leader_id"] = payload["leader_ids"][0]
+
     doc = {
         "id": str(uuid.uuid4()),
-        **data.model_dump(),
+        **payload,
         "is_active": True,
         "is_deleted": False,
         "created_by": current_user.id,
@@ -135,6 +154,13 @@ async def update_team(
     update_data = data.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
+
+    # Normalize leaders
+    if "leader_ids" in update_data and update_data["leader_ids"]:
+        update_data["leader_id"] = update_data["leader_ids"][0]
+    elif "leader_id" in update_data and update_data["leader_id"]:
+        if "leader_ids" not in update_data:
+            update_data["leader_ids"] = [update_data["leader_id"]]
 
     # Check name uniqueness if changing
     if "name" in update_data:
@@ -187,7 +213,7 @@ async def list_grants(
         raise HTTPException(status_code=404, detail="Team not found")
 
     # Only leader or superuser can manage grants
-    if not current_user.is_superuser and team.get("leader_id") != current_user.id:
+    if not current_user.is_superuser and current_user.id not in (team.get("leader_ids", []) + ([team.get("leader_id")] if team.get("leader_id") else [])):
         raise HTTPException(status_code=403, detail="Only team leader can manage access grants")
 
     grants = await db.data_access_grants.find(
@@ -229,7 +255,7 @@ async def create_grant(
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
 
-    if not current_user.is_superuser and team.get("leader_id") != current_user.id:
+    if not current_user.is_superuser and current_user.id not in (team.get("leader_ids", []) + ([team.get("leader_id")] if team.get("leader_id") else [])):
         raise HTTPException(status_code=403, detail="Only team leader can grant access")
 
     grantee_id = data.get("grantee_id")
@@ -289,7 +315,7 @@ async def revoke_grant(
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
 
-    if not current_user.is_superuser and team.get("leader_id") != current_user.id:
+    if not current_user.is_superuser and current_user.id not in (team.get("leader_ids", []) + ([team.get("leader_id")] if team.get("leader_id") else [])):
         raise HTTPException(status_code=403, detail="Only team leader can revoke access")
 
     result = await db.data_access_grants.update_one(

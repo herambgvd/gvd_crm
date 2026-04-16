@@ -34,7 +34,10 @@ def _get_client_ip(request: Request) -> Optional[str]:
 async def _is_leader(user_id: str) -> bool:
     db = get_database()
     count = await db.teams.count_documents(
-        {"leader_id": user_id, "is_deleted": {"$ne": True}}
+        {
+            "$or": [{"leader_id": user_id}, {"leader_ids": user_id}],
+            "is_deleted": {"$ne": True},
+        }
     )
     return count > 0
 

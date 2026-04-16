@@ -132,7 +132,10 @@ class AttendanceService(BaseCRUDService):
         db = get_database()
 
         led_teams = await db.teams.find(
-            {"leader_id": leader_id, "is_deleted": {"$ne": True}},
+            {
+                "$or": [{"leader_id": leader_id}, {"leader_ids": leader_id}],
+                "is_deleted": {"$ne": True},
+            },
             {"_id": 0, "member_ids": 1},
         ).to_list(50)
 

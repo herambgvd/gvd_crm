@@ -42,7 +42,7 @@ const TeamForm = () => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    leader_id: undefined,
+    leader_ids: [],
     member_ids: [],
     department: "",
   });
@@ -66,7 +66,7 @@ const TeamForm = () => {
       setFormData({
         name: team.name || "",
         description: team.description || "",
-        leader_id: team.leader_id ? String(team.leader_id) : undefined,
+        leader_ids: team.leader_ids || (team.leader_id ? [team.leader_id] : []),
         member_ids: (team.member_ids || []).map((id) => String(id)),
         department: team.department || "",
       });
@@ -108,7 +108,7 @@ const TeamForm = () => {
 
     const payload = {
       ...formData,
-      leader_id: formData.leader_id || null,
+      leader_ids: formData.leader_ids || [],
       member_ids: formData.member_ids || [],
     };
 
@@ -164,7 +164,7 @@ const TeamForm = () => {
   // Build team member + leader list for grant dropdowns
   const teamMemberOptions = users.filter((u) => {
     const uid = String(u.id);
-    return formData.member_ids.includes(uid) || formData.leader_id === uid;
+    return formData.member_ids.includes(uid) || formData.leader_ids.includes(uid);
   });
 
   const getUserName = (userId) => {
@@ -261,42 +261,41 @@ const TeamForm = () => {
             </CardContent>
           </Card>
 
-          {/* Leader Selection */}
+          {/* Leader Selection (multiple) */}
           <Card>
             <CardHeader>
-              <CardTitle>Team Leader</CardTitle>
+              <CardTitle>Team Leaders ({formData.leader_ids.length} selected)</CardTitle>
             </CardHeader>
             <CardContent>
-              {users.length > 0 ? (
-                <>
-                  <Select
-                    key={`leader-select-${formData.leader_id || "none"}`}
-                    value={formData.leader_id}
-                    onValueChange={(val) => {
-                      if (val !== undefined && val !== "") {
-                        setFormData((prev) => ({ ...prev, leader_id: val }));
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a team leader" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map((user) => {
-                        const userId = String(user.id);
-                        return (
-                          <SelectItem key={user.id} value={userId}>
-                            {user.name ||
-                              `${user.first_name} ${user.last_name}`}{" "}
-                            ({user.email})
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </>
-              ) : (
+              {users.length === 0 ? (
                 <div className="text-sm text-gray-500">Loading users...</div>
+              ) : (
+                <div className="max-h-48 overflow-y-auto border rounded-md divide-y divide-border/40">
+                  {users.map((user) => {
+                    const uid = String(user.id);
+                    const fullName = user.name || `${user.first_name || ""} ${user.last_name || ""}`.trim();
+                    const isSelected = formData.leader_ids.includes(uid);
+                    return (
+                      <label key={uid} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-muted/30">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              leader_ids: isSelected
+                                ? prev.leader_ids.filter((id) => id !== uid)
+                                : [...prev.leader_ids, uid],
+                            }));
+                          }}
+                          className="h-3.5 w-3.5 rounded"
+                        />
+                        <span className="font-medium">{fullName}</span>
+                        <span className="text-muted-foreground text-xs">{user.email}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               )}
             </CardContent>
           </Card>
