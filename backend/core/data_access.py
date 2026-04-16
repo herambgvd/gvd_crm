@@ -72,14 +72,28 @@ async def get_user_team_context(user_id: str) -> Dict[str, Any]:
     return context
 
 
+async def _is_admin_role(user_id: str) -> bool:
+    """Check if user has the Admin role (full access to all modules)."""
+    db = get_database()
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "role_id": 1})
+    if not user or not user.get("role_id"):
+        return False
+    role = await db.roles.find_one({"id": user["role_id"]}, {"_id": 0, "name": 1})
+    return role and role.get("name", "").lower() == "admin"
+
+
 async def build_access_query(user_id: str, is_superuser: bool = False) -> Dict[str, Any]:
     """
     Build a MongoDB query filter that restricts data to what the user can see.
 
     Returns a dict to merge into your existing query.
-    Returns {} for superusers (no restriction).
+    Returns {} for superusers and admin-role users (no restriction).
     """
     if is_superuser:
+        return {}
+
+    # Users with Admin role also see everything
+    if await _is_admin_role(user_id):
         return {}
 
     ctx = await get_user_team_context(user_id)
